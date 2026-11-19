@@ -1,0 +1,64 @@
+# render.yaml — Blueprint de Render.com
+# Render detecta este archivo y configura el servicio automáticamente.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: el-pinguin-api
+    runtime: php
+    plan: free
+    buildCommand: bash render-build.sh
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_NAME
+        value: "El Pinguin"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true          # Render genera una key segura automáticamente
+      - key: APP_URL
+        fromService:
+          type: web
+          name: el-pinguin-api
+          property: host
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: el-pinguin-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: el-pinguin-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: el-pinguin-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: el-pinguin-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: el-pinguin-db
+          property: password
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+
+databases:
+  - name: el-pinguin-db
+    plan: free
+    databaseName: elpinguin
+    user: elpinguin_user
+
