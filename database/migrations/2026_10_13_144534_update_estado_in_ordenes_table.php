@@ -7,30 +7,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("
-            ALTER TABLE ordenes
-            MODIFY estado ENUM(
-                'pendiente',
-                'preparando',
-                'listo',
-                'entregado',
-                'cancelada',
-                'cerrada'
-            ) NOT NULL DEFAULT 'pendiente'
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                ALTER TABLE ordenes
+                MODIFY estado ENUM(
+                    'pendiente',
+                    'preparando',
+                    'listo',
+                    'entregado',
+                    'cancelada',
+                    'cerrada'
+                ) NOT NULL DEFAULT 'pendiente'
+            ");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("
-            ALTER TABLE ordenes
-            MODIFY estado ENUM(
-                'pendiente',
-                'preparando',
-                'listo',
-                'entregado',
-                'cancelada'
-            ) NOT NULL DEFAULT 'pendiente'
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                ALTER TABLE ordenes
+                MODIFY estado ENUM(
+                    'pendiente',
+                    'preparando',
+                    'listo',
+                    'entregado',
+                    'cancelada'
+                ) NOT NULL DEFAULT 'pendiente'
+            ");
+        }
     }
 };

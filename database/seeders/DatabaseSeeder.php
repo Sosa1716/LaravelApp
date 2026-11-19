@@ -13,6 +13,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MesaSeeder::class,
             CategoriaSeeder::class,
+            PlatilloSeeder::class,
+            OrdenSeeder::class,
         ]);
     }
 }
