@@ -18,17 +18,17 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Crear directorios necesarios y dar permisos
-RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN mkdir -p storage/logs \
+             storage/framework/cache \
+             storage/framework/sessions \
+             storage/framework/views \
+             bootstrap/cache \
+    && chmod -R 777 storage bootstrap/cache
 
-EXPOSE 8000
+EXPOSE 10000
 
-# Al arrancar el contenedor:
-# 1. Migra la base de datos
-# 2. Siembra datos base (updateOrCreate, es idempotente)
-# 3. Levanta el servidor en el puerto que Render asigna
-CMD bash -c "\
-    php artisan migrate --force && \
-    php artisan db:seed --force && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
+# IMPORTANTE: usar comillas simples en el CMD para que $PORT se expanda
+# en TIEMPO DE EJECUCIÓN (cuando Render ya lo tiene disponible),
+# no en tiempo de build.
+CMD ["/bin/bash", "-c", "php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=$PORT"]
 
