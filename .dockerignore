@@ -1,0 +1,16 @@
+node_modules
+vendor
+.env
+.env.*
+.git
+.gitignore
+storage/logs/*.log
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+public/build
+public/hot
+*.log
+Thumbs.db
+.DS_Store
+
