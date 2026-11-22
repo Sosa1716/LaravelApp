@@ -10,6 +10,65 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        :root {
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+        }
+
+        /* ── Tabs de administración ── */
+        .admin-tab-btn { border-bottom: 2px solid transparent; }
+        .admin-tab-btn.tab-active {
+            color: #fff !important;
+            border-bottom-color: #60a5fa !important;
+        }
+
+        /* ── Cards de cocina con acento lateral ── */
+        .card-pendiente {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(to right, rgba(254,243,199,.22) 0%, transparent 90px);
+        }
+        .card-preparando {
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(to right, rgba(219,234,254,.22) 0%, transparent 90px);
+        }
+        .card-listo {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(to right, rgba(209,250,229,.22) 0%, transparent 90px);
+        }
+
+        /* ── Tarjetas métricas con hover suave ── */
+        .metric-card {
+            transition: box-shadow 200ms var(--ease-ui), transform 150ms var(--ease-ui);
+        }
+        .metric-card:hover {
+            box-shadow: 0 6px 20px 0 rgba(15,23,42,.11);
+            transform: translateY(-2px);
+        }
+
+        /* ── Botones con feedback táctil ── */
+        .btn-action {
+            transition: background-color 150ms var(--ease-ui), transform 100ms var(--ease-ui), box-shadow 150ms var(--ease-ui);
+        }
+        .btn-action:active { transform: scale(0.97); }
+
+        /* ── Filas de tabla con hover suave ── */
+        .tr-hover { transition: background-color 120ms var(--ease-ui); }
+        .tr-hover:hover { background-color: rgb(248 250 252); }
+
+        /* ── Filtros de cocina ── */
+        .filter-btn {
+            transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui), transform 100ms var(--ease-ui);
+        }
+        .filter-btn:active { transform: scale(0.97); }
+
+        /* ── Foco visible global ── */
+        :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 6px; }
+
+        /* ── Separador de header admin ── */
+        .tab-bar-separator { border-top: 1px solid rgba(51,65,85,.8); }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen antialiased">
@@ -52,49 +111,45 @@
 
 
     <!-- ================= VISTA DE COCINA ================= -->
-    <div id="view-cocina" class="hidden min-h-screen flex flex-col">
+    <div id="view-cocina" class="hidden min-h-screen flex flex-col bg-slate-100">
         <!-- Barra Superior Cocina -->
-        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-lg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">🍳</span>
+                    <div class="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-xl shadow-sm shrink-0">🍳</div>
                     <div>
-                        <h1 class="text-lg font-bold leading-tight flex items-center gap-2">
+                        <h1 class="text-base font-bold leading-tight text-white">
                             Módulo de Cocina
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                Comandas Activas
-                            </span>
+                            <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 align-middle">En vivo</span>
                         </h1>
-                        <p class="text-xs text-slate-400">Pantalla de pedidos en tiempo real para preparación</p>
+                        <p class="text-[11px] text-slate-400 leading-none mt-0.5">Comandas en tiempo real · <span id="cocina-sync-text" class="text-emerald-400">Sincronizado</span></p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <!-- Estado de sincronización con API móvil -->
-                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="cocina-sync-text">Sincronizado con API móvil</span>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        API móvil
+                    </span>
 
                     <button onclick="fetchOrdenes()" title="Actualizar órdenes"
-                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                        class="btn-action px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5">
                         <span id="sync-icon">🔄</span> Actualizar
                     </button>
 
-                    <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+                    <div class="h-5 w-px bg-slate-700 hidden sm:block"></div>
 
-                    <!-- Botón para volver a Admin si el usuario autenticado es Admin -->
                     <button id="btn-return-admin" onclick="showView('admin')"
-                        class="hidden px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition">
-                        ⚙️ Volver a Admin
+                        class="hidden btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                        ⚙️ Admin
                     </button>
 
-                    <span class="text-xs text-slate-300 font-medium px-2 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-cocina">
+                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-cocina">
                         Cocina
                     </span>
 
                     <button onclick="handleLogout()"
-                        class="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition">
+                        class="btn-action px-3 py-1.5 bg-red-700/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg">
                         Salir
                     </button>
                 </div>
@@ -102,38 +157,41 @@
         </header>
 
         <!-- Contenido Cocina -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
-            <div class="mb-5 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="text-base">ℹ️</span>
-                    <span><strong>Modo Cocina:</strong> Vista enfocada exclusivamente en preparación de comandas. La administración de platillos, categorías, mesas y cobros está restringida.</span>
-                </div>
-                <span class="font-bold uppercase tracking-wider text-[11px] bg-amber-200/70 px-2 py-0.5 rounded text-amber-900">Solo lectura / Estado</span>
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex-1 w-full">
+
+            <!-- Aviso de modo cocina compacto -->
+            <div class="mb-5 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-[11px] font-semibold text-amber-800">
+                    🍳 Modo Cocina — solo preparación
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[11px] font-medium text-slate-500">
+                    🔒 Administración restringida
+                </span>
             </div>
 
             <!-- Filtros Cocina -->
             <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1" id="cocina-filters">
                 <button onclick="setFilter('todas')" data-filter="todas"
-                    class="filter-btn active-filter px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-slate-900 text-white shadow-sm">
-                    <span>Todas las activas</span>
-                    <span id="badge-count-todas" class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20">0</span>
+                    class="filter-btn active-filter px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 bg-slate-900 text-white shadow-sm whitespace-nowrap">
+                    <span>📋 Todas</span>
+                    <span id="badge-count-todas" class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 font-bold">0</span>
                 </button>
                 <button onclick="setFilter('pendiente')" data-filter="pendiente"
-                    class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 bg-white text-slate-700 hover:bg-amber-50 border border-slate-200">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-amber-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
                     <span>Pendientes</span>
                     <span id="badge-count-pendiente" class="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">0</span>
                 </button>
                 <button onclick="setFilter('preparando')" data-filter="preparando"
-                    class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 bg-white text-slate-700 hover:bg-blue-50 border border-slate-200">
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-blue-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
                     <span>En Preparación</span>
                     <span id="badge-count-preparando" class="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 font-bold">0</span>
                 </button>
                 <button onclick="setFilter('listo')" data-filter="listo"
-                    class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 bg-white text-slate-700 hover:bg-emerald-50 border border-slate-200">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>Listas</span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-emerald-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                    <span>Listas ✓</span>
                     <span id="badge-count-listo" class="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">0</span>
                 </button>
             </div>
@@ -141,85 +199,85 @@
             <!-- Grilla de Órdenes Cocina -->
             <div id="ordenes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
 
-            <div id="ordenes-empty" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
-                <span class="text-5xl">✨</span>
-                <h3 class="text-lg font-bold text-slate-800 mt-3">¡Todo al día en cocina!</h3>
-                <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">No hay órdenes activas pendientes en este momento.</p>
+            <div id="ordenes-empty" class="hidden text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 p-8">
+                <span class="text-5xl block mb-3">✨</span>
+                <h3 class="text-lg font-bold text-slate-800">¡Todo al día en cocina!</h3>
+                <p class="text-sm text-slate-500 mt-1 max-w-xs mx-auto">No hay comandas activas en este momento.</p>
             </div>
         </main>
     </div>
 
 
     <!-- ================= VISTA DE ADMINISTRACIÓN ================= -->
-    <div id="view-admin" class="hidden min-h-screen flex flex-col">
+    <div id="view-admin" class="hidden min-h-screen flex flex-col bg-slate-100">
         <!-- Barra Superior Admin -->
-        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-lg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">⚙️</span>
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-xl shadow-sm shrink-0">⚙️</div>
                     <div>
-                        <h1 class="text-lg font-bold leading-tight flex items-center gap-2">
+                        <h1 class="text-base font-bold leading-tight text-white">
                             Panel de Administración
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                Gestión Integral
-                            </span>
+                            <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 align-middle">Admin</span>
                         </h1>
-                        <p class="text-xs text-slate-400">Control de menú, mesas, comandas, finanzas y operaciones</p>
+                        <p class="text-[11px] text-slate-400 leading-none mt-0.5">Menú · Mesas · Órdenes · Finanzas</p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 sm:gap-3">
+                <div class="flex items-center gap-2">
                     <button onclick="showView('cocina'); fetchOrdenes();"
-                        class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/30 transition flex items-center gap-1.5">
-                        🍳 Ver Cocina
+                        class="btn-action px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/30 flex items-center gap-1.5">
+                        🍳 Cocina
                     </button>
                     <button onclick="loadAdminData()"
-                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
+                        class="btn-action px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700">
                         🔄 Recargar
                     </button>
-                    <span class="text-xs text-slate-300 font-medium px-2 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-admin">
+                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-admin">
                         Administrador
                     </span>
                     <button onclick="handleLogout()"
-                        class="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition">
+                        class="btn-action px-3 py-1.5 bg-red-700/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg">
                         Salir
                     </button>
                 </div>
             </div>
 
             <!-- Menú de Pestañas de Administración -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex overflow-x-auto border-t border-slate-800 gap-1 pt-2 pb-2 text-xs font-semibold">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex overflow-x-auto tab-bar-separator gap-0 text-xs font-semibold">
                 <button onclick="switchAdminTab('resumen')" id="tab-btn-resumen"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
-                    📊 Resumen General
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
+                    📊 Resumen
                 </button>
                 <button onclick="switchAdminTab('platillos')" id="tab-btn-platillos"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
                     🍲 Platillos
                 </button>
                 <button onclick="switchAdminTab('categorias')" id="tab-btn-categorias"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
                     📑 Categorías
                 </button>
                 <button onclick="switchAdminTab('mesas')" id="tab-btn-mesas"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
                     🪑 Mesas
                 </button>
                 <button onclick="switchAdminTab('ordenes')" id="tab-btn-ordenes"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
-                    📋 Historial Órdenes
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
+                    📋 Órdenes
                 </button>
                 <button onclick="switchAdminTab('pagos')" id="tab-btn-pagos"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
-                    💳 Pagos Registrados
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap">
+                    💳 Pagos
                 </button>
                 <button onclick="switchAdminTab('usuarios')" id="tab-btn-usuarios"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1">
-                    👥 Usuarios <span class="text-[9px] bg-slate-800 text-amber-400 px-1.5 py-0.2 rounded border border-amber-400/30">Pendiente</span>
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
+                    👥 Usuarios
+                    <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-400/30">Pronto</span>
                 </button>
                 <button onclick="switchAdminTab('reportes')" id="tab-btn-reportes"
-                    class="admin-tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1">
-                    📈 Reportes <span class="text-[9px] bg-slate-800 text-amber-400 px-1.5 py-0.2 rounded border border-amber-400/30">Pendiente</span>
+                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
+                    📈 Reportes
+                    <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-400/30">Pronto</span>
                 </button>
             </div>
         </header>
@@ -228,67 +286,67 @@
 
             <!-- 1. TAB: RESUMEN GENERAL -->
             <div id="tab-content-resumen" class="admin-tab-content space-y-6">
-                <!-- Tarjetas Métricas Clave -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Recaudado</span>
+                <!-- Tarjetas Métricas Clave — ventas destacada con borde superior -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="metric-card col-span-2 lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-emerald-500">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Recaudado</span>
                             <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-base">💰</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900" id="metric-ventas">$0.00</div>
-                        <p class="text-xs text-slate-500 mt-1" id="metric-pagos-count">0 pagos registrados</p>
+                        <div class="text-3xl font-black text-slate-900 leading-none" id="metric-ventas">$0.00</div>
+                        <p class="text-xs text-slate-500 mt-2" id="metric-pagos-count">0 transacciones</p>
                     </div>
 
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Órdenes Totales</span>
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Órdenes</span>
                             <span class="p-2 rounded-xl bg-blue-50 text-blue-600 text-base">📋</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900" id="metric-ordenes">0</div>
-                        <p class="text-xs text-slate-500 mt-1" id="metric-ordenes-sub">0 activas / 0 cerradas</p>
+                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-ordenes">0</div>
+                        <p class="text-xs text-slate-500 mt-2" id="metric-ordenes-sub">0 activas / 0 cerradas</p>
                     </div>
 
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Mesas Activas</span>
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mesas</span>
                             <span class="p-2 rounded-xl bg-purple-50 text-purple-600 text-base">🪑</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900" id="metric-mesas">0</div>
-                        <p class="text-xs text-slate-500 mt-1" id="metric-mesas-sub">0 disponibles</p>
+                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-mesas">0</div>
+                        <p class="text-xs text-slate-500 mt-2" id="metric-mesas-sub">0 disponibles</p>
                     </div>
 
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Platillos en Carta</span>
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Platillos</span>
                             <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-base">🍲</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900" id="metric-platillos">0</div>
-                        <p class="text-xs text-slate-500 mt-1" id="metric-categorias">en 0 categorías</p>
+                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-platillos">0</div>
+                        <p class="text-xs text-slate-500 mt-2" id="metric-categorias">en 0 categorías</p>
                     </div>
                 </div>
 
                 <!-- Grilla rápida de actividad -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     <!-- Últimas Órdenes -->
                     <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                                 <span>📋</span> Últimas Órdenes
                             </h3>
-                            <button onclick="switchAdminTab('ordenes')" class="text-xs text-blue-600 hover:underline font-semibold">Ver todas</button>
+                            <button onclick="switchAdminTab('ordenes')" class="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">Ver todas →</button>
                         </div>
-                        <div id="resumen-ultimas-ordenes" class="space-y-2.5"></div>
+                        <div id="resumen-ultimas-ordenes" class="space-y-2"></div>
                     </div>
 
                     <!-- Últimos Pagos -->
                     <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                                <span>💳</span> Últimos Pagos Registrados
+                                <span>💳</span> Últimos Pagos
                             </h3>
-                            <button onclick="switchAdminTab('pagos')" class="text-xs text-blue-600 hover:underline font-semibold">Ver todos</button>
+                            <button onclick="switchAdminTab('pagos')" class="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">Ver todos →</button>
                         </div>
-                        <div id="resumen-ultimos-pagos" class="space-y-2.5"></div>
+                        <div id="resumen-ultimos-pagos" class="space-y-2"></div>
                     </div>
                 </div>
             </div>
@@ -298,9 +356,9 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Catálogo de Platillos</h2>
-                        <p class="text-xs text-slate-500">Administra nombres, precios, fotos, categorías y disponibilidad en cocina</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Administra nombres, precios, fotos, categorías y disponibilidad en cocina</p>
                     </div>
-                    <button onclick="openModalPlatillo()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1.5">
+                    <button onclick="openModalPlatillo()" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow flex items-center gap-1.5">
                         <span>+</span> Nuevo Platillo
                     </button>
                 </div>
@@ -308,7 +366,7 @@
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs text-slate-600">
-                            <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+                            <thead class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
                                 <tr>
                                     <th class="p-3.5">Platillo</th>
                                     <th class="p-3.5">Categoría</th>
@@ -328,9 +386,9 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Categorías del Menú</h2>
-                        <p class="text-xs text-slate-500">Agrupaciones del menú gastronómico</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Agrupaciones del menú gastronómico</p>
                     </div>
-                    <button onclick="openModalCategoria()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1.5">
+                    <button onclick="openModalCategoria()" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow flex items-center gap-1.5">
                         <span>+</span> Nueva Categoría
                     </button>
                 </div>
@@ -338,7 +396,7 @@
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs text-slate-600">
-                            <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+                            <thead class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
                                 <tr>
                                     <th class="p-3.5">ID</th>
                                     <th class="p-3.5">Nombre</th>
@@ -359,9 +417,9 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Gestión de Mesas</h2>
-                        <p class="text-xs text-slate-500">Configura la numeración y el estado operativo de las mesas</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Configura la numeración y el estado operativo de las mesas</p>
                     </div>
-                    <button onclick="openModalMesa()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1.5">
+                    <button onclick="openModalMesa()" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow flex items-center gap-1.5">
                         <span>+</span> Nueva Mesa
                     </button>
                 </div>
@@ -374,10 +432,10 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Historial de Órdenes</h2>
-                        <p class="text-xs text-slate-500">Registro histórico de comandas, mesas y montos</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Registro histórico de comandas, mesas y montos</p>
                     </div>
                     <div class="flex items-center gap-1 text-xs">
-                        <select id="filtro-historial-estado" onchange="renderAdminOrdenes()" class="px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-700 outline-none">
+                        <select id="filtro-historial-estado" onchange="renderAdminOrdenes()" class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none font-medium">
                             <option value="todos">Todos los estados</option>
                             <option value="pendiente">Pendiente</option>
                             <option value="preparando">Preparando</option>
@@ -392,7 +450,7 @@
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs text-slate-600">
-                            <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+                            <thead class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
                                 <tr>
                                     <th class="p-3.5"># Orden</th>
                                     <th class="p-3.5">Mesa</th>
@@ -414,7 +472,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Registro de Pagos</h2>
-                        <p class="text-xs text-slate-500">Historial financiero de transacciones confirmadas</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Historial financiero de transacciones confirmadas</p>
                     </div>
                     <div class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs" id="pagos-total-banner">
                         Total: $0.00
@@ -424,7 +482,7 @@
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs text-slate-600">
-                            <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+                            <thead class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
                                 <tr>
                                     <th class="p-3.5">ID Pago</th>
                                     <th class="p-3.5"># Orden</th>
@@ -501,7 +559,7 @@
                                 Este módulo forma parte del alcance funcional original del sistema y se activará en cuanto se programen los endpoints de estadísticas y reportes agrupados (<code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-800">/api/reportes</code>).
                             </p>
                             <p class="text-xs text-slate-500 mt-2">
-                                💡 Mientras tanto, puedes consultar la información financiera en tiempo real desde la pestaña <strong>📊 Resumen General</strong> y <strong>💳 Pagos Registrados</strong>.
+                                💡 Mientras tanto, puedes consultar la información financiera en tiempo real desde la pestaña <strong>📊 Resumen</strong> y <strong>💳 Pagos</strong>.
                             </p>
                         </div>
                     </div>
@@ -519,7 +577,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 id="modal-platillo-titulo" class="font-bold text-slate-900 text-sm">Nuevo Platillo</h3>
-                <button onclick="closeModalPlatillo()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                <button onclick="closeModalPlatillo()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors duration-150 text-lg leading-none">&times;</button>
             </div>
             <form id="form-platillo" onsubmit="savePlatillo(event)" class="p-5 space-y-4 text-xs">
                 <input type="hidden" id="platillo-id">
@@ -550,8 +608,8 @@
                     <label for="platillo-disponible" class="font-semibold text-slate-700">Disponible para ordenar</label>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="closeModalPlatillo()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Platillo</button>
+                    <button type="button" onclick="closeModalPlatillo()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Platillo</button>
                 </div>
             </form>
         </div>
@@ -562,7 +620,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 id="modal-categoria-titulo" class="font-bold text-slate-900 text-sm">Nueva Categoría</h3>
-                <button onclick="closeModalCategoria()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                <button onclick="closeModalCategoria()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors duration-150 text-lg leading-none">&times;</button>
             </div>
             <form id="form-categoria" onsubmit="saveCategoria(event)" class="p-5 space-y-4 text-xs">
                 <input type="hidden" id="categoria-id">
@@ -579,8 +637,8 @@
                     <label for="categoria-activo" class="font-semibold text-slate-700">Categoría Activa</label>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="closeModalCategoria()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Categoría</button>
+                    <button type="button" onclick="closeModalCategoria()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Categoría</button>
                 </div>
             </form>
         </div>
@@ -591,7 +649,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 id="modal-mesa-titulo" class="font-bold text-slate-900 text-sm">Registrar Mesa</h3>
-                <button onclick="closeModalMesa()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                <button onclick="closeModalMesa()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors duration-150 text-lg leading-none">&times;</button>
             </div>
             <form id="form-mesa" onsubmit="saveMesa(event)" class="p-5 space-y-4 text-xs">
                 <input type="hidden" id="mesa-id">
@@ -609,8 +667,8 @@
                     </select>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="closeModalMesa()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Mesa</button>
+                    <button type="button" onclick="closeModalMesa()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Mesa</button>
                 </div>
             </form>
         </div>
@@ -621,7 +679,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <h3 id="modal-orden-titulo" class="font-bold text-slate-900 text-sm">Detalle de Comanda</h3>
-                <button onclick="closeModalOrdenDetalle()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                <button onclick="closeModalOrdenDetalle()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors duration-150 text-lg leading-none">&times;</button>
             </div>
             <div class="p-5 space-y-4 text-xs">
                 <div id="modal-orden-info" class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100"></div>
@@ -716,16 +774,16 @@
         function switchAdminTab(tabName) {
             document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-                btn.classList.remove('bg-slate-800', 'text-white');
-                btn.classList.add('text-slate-300');
+                btn.classList.remove('tab-active', 'text-white');
+                btn.classList.add('text-slate-400');
             });
 
             const content = document.getElementById(`tab-content-${tabName}`);
             const btn = document.getElementById(`tab-btn-${tabName}`);
             if (content) content.classList.remove('hidden');
             if (btn) {
-                btn.classList.add('bg-slate-800', 'text-white');
-                btn.classList.remove('text-slate-300');
+                btn.classList.add('tab-active', 'text-white');
+                btn.classList.remove('text-slate-400');
             }
         }
 
@@ -811,14 +869,14 @@
             const container = document.getElementById('toast-container');
             if (!container) return;
             const toast = document.createElement('div');
-            toast.className = 'pointer-events-auto bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 transform transition duration-300 translate-y-2 opacity-0';
+            toast.className = 'pointer-events-auto bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 transform transition-all duration-300 translate-y-2 scale-95 opacity-0';
             toast.innerHTML = `<span>🔔</span> <span>${msg}</span>`;
             container.appendChild(toast);
             requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
+                toast.classList.remove('translate-y-2', 'scale-95', 'opacity-0');
             });
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
+                toast.classList.add('opacity-0', 'translate-y-2', 'scale-95');
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
         }
@@ -936,30 +994,29 @@
             empty.classList.add('hidden');
 
             grid.innerHTML = filtered.map(orden => {
-                let theme = {
-                    border: 'border-amber-300',
-                    badgeBg: 'bg-amber-100 text-amber-900 border-amber-300',
-                    badgeText: 'Pendiente',
-                    badgeIcon: '⏳',
-                    btnAction: `<button onclick="updateEstado(${orden.id}, 'preparando')" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow transition active:scale-95"><span>🍳 Empezar a Preparar</span></button>`
-                };
+                let cardClass, badgeBg, badgeText, badgeIcon, btnAction;
+
+                const elapsed = Math.round((Date.now() - new Date(orden.created_at)) / 60000);
+                const elapsedStr = isNaN(elapsed) ? '' : `⏱ ${elapsed}m`;
 
                 if (orden.estado === 'preparando') {
-                    theme = {
-                        border: 'border-blue-400',
-                        badgeBg: 'bg-blue-100 text-blue-900 border-blue-300',
-                        badgeText: 'En Preparación',
-                        badgeIcon: '🔥',
-                        btnAction: `<button onclick="updateEstado(${orden.id}, 'listo')" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow transition active:scale-95"><span>✓ Marcar como Listo</span></button>`
-                    };
+                    cardClass  = 'card-preparando';
+                    badgeBg    = 'bg-blue-100 text-blue-900 border-blue-300';
+                    badgeText  = 'En Preparación';
+                    badgeIcon  = '🔥';
+                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'listo')" class="btn-action w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow">✓ Marcar como Listo</button>`;
                 } else if (orden.estado === 'listo') {
-                    theme = {
-                        border: 'border-emerald-400',
-                        badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-                        badgeText: 'Listo para Servir',
-                        badgeIcon: '✅',
-                        btnAction: `<div class="w-full py-2 px-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl text-center border border-emerald-200">✨ Esperando entrega por mesero</div>`
-                    };
+                    cardClass  = 'card-listo';
+                    badgeBg    = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                    badgeText  = 'Listo para Servir';
+                    badgeIcon  = '✅';
+                    btnAction  = `<div class="w-full py-3 px-4 bg-emerald-50 text-emerald-800 text-sm font-semibold rounded-xl text-center border-2 border-emerald-300">✅ Listo para servir</div>`;
+                } else {
+                    cardClass  = 'card-pendiente';
+                    badgeBg    = 'bg-amber-100 text-amber-900 border-amber-300';
+                    badgeText  = 'Pendiente';
+                    badgeIcon  = '⏳';
+                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'preparando')" class="btn-action w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow">🍳 Iniciar Preparación</button>`;
                 }
 
                 const dateObj = new Date(orden.created_at);
@@ -967,16 +1024,16 @@
 
                 const platillosHtml = (orden.detalles || []).map(d => `
                     <li class="py-2.5 border-b border-slate-100 last:border-none">
-                        <div class="flex items-start gap-2">
-                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-900 text-white text-xs font-bold shrink-0">
+                        <div class="flex items-start gap-2.5">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-900 text-white text-sm font-bold shrink-0">
                                 ${d.cantidad}x
                             </span>
-                            <span class="font-bold text-slate-900 text-sm leading-snug">
+                            <span class="font-bold text-slate-900 text-sm leading-snug pt-1">
                                 ${d.platillo ? d.platillo.nombre : 'Platillo'}
                             </span>
                         </div>
                         ${d.notas ? `
-                            <div class="mt-1.5 ml-8 px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg flex items-start gap-1.5">
+                            <div class="mt-1.5 ml-10 px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg flex items-start gap-1.5">
                                 <span class="shrink-0 text-amber-700 font-bold">Nota:</span>
                                 <span class="font-medium">${d.notas}</span>
                             </div>
@@ -985,19 +1042,22 @@
                 `).join('');
 
                 return `
-                    <div class="bg-white rounded-2xl shadow-sm border-2 ${theme.border} overflow-hidden flex flex-col justify-between transition hover:shadow-md">
+                    <div class="${cardClass} rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
                         <div>
                             <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-base font-extrabold text-slate-900">#${orden.id}</span>
-                                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-200 text-slate-800 text-xs font-bold">
+                                    <span class="text-xl font-black text-slate-900">#${orden.id}</span>
+                                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-white text-xs font-bold">
                                         Mesa ${orden.mesa ? orden.mesa.numero : 'S/N'}
                                     </span>
                                 </div>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${theme.badgeBg}">
-                                    <span>${theme.badgeIcon}</span>
-                                    <span>${theme.badgeText}</span>
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    ${elapsedStr ? `<span class="text-xs text-slate-500 font-medium">${elapsedStr}</span>` : ''}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${badgeBg}">
+                                        <span>${badgeIcon}</span>
+                                        <span>${badgeText}</span>
+                                    </span>
+                                </div>
                             </div>
                             <div class="px-4 py-2 bg-slate-100/50 flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-100">
                                 <span>Mesero: <strong class="text-slate-700">${orden.user ? orden.user.name : 'N/A'}</strong></span>
@@ -1008,7 +1068,7 @@
                             </div>
                         </div>
                         <div class="p-4 bg-slate-50/60 border-t border-slate-100">
-                            ${theme.btnAction}
+                            ${btnAction}
                         </div>
                     </div>
                 `;
@@ -1063,27 +1123,38 @@
             document.getElementById('metric-categorias').innerText = `en ${allCategorias.length} categorías activas`;
 
             // Últimas órdenes resumen
+            const stateColors = {
+                pendiente: 'border-l-amber-400',
+                preparando: 'border-l-blue-400',
+                listo: 'border-l-emerald-500',
+                entregado: 'border-l-purple-400',
+                cerrada: 'border-l-slate-300',
+                cancelada: 'border-l-red-400'
+            };
             const ultimas = allAdminOrders.slice(0, 5);
-            document.getElementById('resumen-ultimas-ordenes').innerHTML = ultimas.length ? ultimas.map(o => `
-                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
+            document.getElementById('resumen-ultimas-ordenes').innerHTML = ultimas.length ? ultimas.map(o => {
+                const bc = stateColors[o.estado] || 'border-l-slate-200';
+                const estadoLabel = o.estado.charAt(0).toUpperCase() + o.estado.slice(1);
+                return `
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs border-l-4 ${bc} pl-3">
                     <div class="flex items-center gap-2">
                         <span class="font-extrabold text-slate-900">#${o.id}</span>
-                        <span class="text-slate-600">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</span>
+                        <span class="text-slate-500">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-800">$${parseFloat(o.total || 0).toFixed(2)}</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass(o.estado)}">${o.estado}</span>
+                        <span class="font-bold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass(o.estado)}">${estadoLabel}</span>
                     </div>
                 </div>
-            `).join('') : '<p class="text-slate-400 text-xs">Sin órdenes recientes.</p>';
+            `}).join('') : '<p class="text-slate-400 text-xs">Sin órdenes recientes.</p>';
 
             // Últimos pagos resumen
             const ultimosPagos = allPagos.slice(0, 5);
             document.getElementById('resumen-ultimos-pagos').innerHTML = ultimosPagos.length ? ultimosPagos.map(p => `
-                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-xs">
-                    <div>
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs">
+                    <div class="flex flex-col gap-0.5">
                         <span class="font-bold text-slate-800">Orden #${p.orden_id}</span>
-                        <span class="text-slate-400 ml-1">(${p.metodo})</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wide self-start">${p.metodo}</span>
                     </div>
                     <span class="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
                         +$${parseFloat(p.monto).toFixed(2)}
@@ -1110,7 +1181,7 @@
             if (!tbody) return;
 
             tbody.innerHTML = allPlatillos.map(p => `
-                <tr class="hover:bg-slate-50 transition">
+                <tr class="tr-hover">
                     <td class="p-3.5">
                         <div class="flex items-center gap-3">
                             ${p.imagen ? `<img src="${p.imagen}" class="w-9 h-9 rounded-lg object-cover border" onerror="this.src=''; this.innerText='🍲'">` : `<div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-base">🍲</div>`}
@@ -1123,13 +1194,13 @@
                     <td class="p-3.5 font-medium text-slate-700">${p.categoria ? p.categoria.nombre : 'Sin categoría'}</td>
                     <td class="p-3.5 font-bold text-slate-900">$${parseFloat(p.precio).toFixed(2)}</td>
                     <td class="p-3.5">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${p.disponible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${p.disponible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
                             ${p.disponible ? 'Disponible' : 'Agotado'}
                         </span>
                     </td>
                     <td class="p-3.5 text-right space-x-1">
-                        <button onclick="editPlatillo(${p.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition">Editar</button>
-                        <button onclick="deletePlatillo(${p.id})" class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs transition">Eliminar</button>
+                        <button onclick="editPlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs">Editar</button>
+                        <button onclick="deletePlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs">Eliminar</button>
                     </td>
                 </tr>
             `).join('');
@@ -1218,23 +1289,23 @@
             if (!tbody) return;
 
             tbody.innerHTML = allCategorias.map(c => `
-                <tr class="hover:bg-slate-50 transition">
+                <tr class="tr-hover">
                     <td class="p-3.5 font-bold text-slate-500">#${c.id}</td>
                     <td class="p-3.5 font-bold text-slate-900">${c.nombre}</td>
                     <td class="p-3.5 text-slate-500">${c.descripcion || 'Sin descripción'}</td>
                     <td class="p-3.5">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
                             ${c.platillos ? c.platillos.length : 0} platillos
                         </span>
                     </td>
                     <td class="p-3.5">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${c.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
                             ${c.activo ? 'Activa' : 'Inactiva'}
                         </span>
                     </td>
                     <td class="p-3.5 text-right space-x-1">
-                        <button onclick="editCategoria(${c.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition">Editar</button>
-                        <button onclick="deleteCategoria(${c.id})" class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs transition">Eliminar</button>
+                        <button onclick="editCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs">Editar</button>
+                        <button onclick="deleteCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs">Eliminar</button>
                     </td>
                 </tr>
             `).join('');
@@ -1311,6 +1382,13 @@
             if (!grid) return;
 
             grid.innerHTML = allMesas.map(m => {
+                const topBorder = {
+                    disponible: 'border-t-emerald-400',
+                    ocupada: 'border-t-blue-400',
+                    reservada: 'border-t-purple-400',
+                    fuera_servicio: 'border-t-red-400'
+                }[m.estado] || 'border-t-slate-200';
+
                 let statusBadge = {
                     disponible: 'bg-emerald-100 text-emerald-800 border-emerald-200',
                     ocupada: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -1319,13 +1397,13 @@
                 }[m.estado] || 'bg-slate-100 text-slate-700';
 
                 return `
-                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow transition">
+                    <div class="metric-card bg-white p-4 rounded-2xl border border-slate-200/80 border-t-4 ${topBorder} shadow-sm flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-base font-extrabold text-slate-900">Mesa ${m.numero}</span>
-                                <button onclick="deleteMesa(${m.id})" title="Eliminar mesa" class="text-slate-400 hover:text-red-600 text-xs font-bold">&times;</button>
+                                <span class="text-2xl font-black text-slate-900">Mesa ${m.numero}</span>
+                                <button onclick="deleteMesa(${m.id})" title="Eliminar mesa" class="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg p-1.5 transition-colors duration-150 text-sm font-bold leading-none">&times;</button>
                             </div>
-                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border mb-3 ${statusBadge}">
+                            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border mb-3 ${statusBadge}">
                                 ${m.estado.replace('_', ' ')}
                             </span>
                         </div>
@@ -1416,21 +1494,22 @@
             tbody.innerHTML = filtered.map(o => {
                 const dateObj = new Date(o.created_at);
                 const fecha = isNaN(dateObj) ? '' : `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                const estadoLabel = o.estado.charAt(0).toUpperCase() + o.estado.slice(1);
 
                 return `
-                    <tr class="hover:bg-slate-50 transition">
+                    <tr class="tr-hover">
                         <td class="p-3.5 font-extrabold text-slate-900">#${o.id}</td>
                         <td class="p-3.5 font-bold text-slate-700">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</td>
                         <td class="p-3.5 text-slate-600">${o.user ? o.user.name : 'N/A'}</td>
-                        <td class="p-3.5 font-extrabold text-slate-900">$${parseFloat(o.total || 0).toFixed(2)}</td>
+                        <td class="p-3.5 font-extrabold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</td>
                         <td class="p-3.5">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass(o.estado)}">
-                                ${o.estado}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold border border-transparent ${badgeClass(o.estado)}">
+                                ${estadoLabel}
                             </span>
                         </td>
                         <td class="p-3.5 text-slate-500">${fecha}</td>
                         <td class="p-3.5 text-right">
-                            <button onclick="verDetalleOrden(${o.id})" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs transition">
+                            <button onclick="verDetalleOrden(${o.id})" class="btn-action px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs">
                                 Ver Detalle
                             </button>
                         </td>
@@ -1449,7 +1528,7 @@
                     <span class="text-slate-500">Mesero:</span> <strong>${orden.user ? orden.user.name : 'N/A'}</strong>
                 </div>
                 <div>
-                    <span class="text-slate-500">Estado:</span> <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass(orden.estado)}">${orden.estado}</span>
+                    <span class="text-slate-500">Estado:</span> <span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass(orden.estado)}">${orden.estado.charAt(0).toUpperCase() + orden.estado.slice(1)}</span>
                 </div>
             `;
 
@@ -1487,18 +1566,18 @@
                 const mesaNum = p.orden && p.orden.mesa ? p.orden.mesa.numero : 'S/N';
 
                 return `
-                    <tr class="hover:bg-slate-50 transition">
+                    <tr class="tr-hover">
                         <td class="p-3.5 font-bold text-slate-500">#${p.id}</td>
                         <td class="p-3.5 font-bold text-slate-800">Orden #${p.orden_id}</td>
-                        <td class="p-3.5 text-slate-700">Mesa ${mesaNum}</td>
+                        <td class="p-3.5 text-slate-700 font-medium">Mesa ${mesaNum}</td>
                         <td class="p-3.5">
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-800">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-slate-100 text-slate-700">
                                 ${p.metodo}
                             </span>
                         </td>
                         <td class="p-3.5 font-extrabold text-emerald-700">$${parseFloat(p.monto).toFixed(2)}</td>
                         <td class="p-3.5">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                                 ${p.estado}
                             </span>
                         </td>
