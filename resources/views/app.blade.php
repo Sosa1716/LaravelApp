@@ -9,147 +9,186 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
         :root {
             --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
             --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.2, 0, 0, 1);
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
         }
 
-        /* ── Tabs de administración ── */
-        .admin-tab-btn { border-bottom: 2px solid transparent; }
+        /* ── Touch & Pointer Ergonomics (Apple Design §1, §10) ── */
+        * { -webkit-tap-highlight-color: transparent; }
+        button, a, input, select { touch-action: manipulation; }
+
+        /* ── Optical Typography Tracking (Apple Design §15) ── */
+        h1, h2, h3, .heading-apple { letter-spacing: -0.024em; }
+        .tracking-apple-sub { letter-spacing: 0.035em; }
+
+        /* ── Apple Translucent Materials (Apple Design §12) ── */
+        .apple-glass-nav {
+            background: rgba(15, 23, 42, 0.86);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        }
+        .apple-glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(20px) saturate(170%);
+            -webkit-backdrop-filter: blur(20px) saturate(170%);
+            box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+        }
+        .apple-squircle {
+            border-radius: 22.5%;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 10px 20px -6px rgba(245, 158, 11, 0.35);
+        }
+
+        /* ── Tabs de administración con feedback fluido ── */
+        .admin-tab-btn {
+            border-bottom: 2px solid transparent;
+            transition: color 150ms var(--ease-ui), border-bottom-color 150ms var(--ease-ui);
+        }
         .admin-tab-btn.tab-active {
             color: #fff !important;
             border-bottom-color: #60a5fa !important;
         }
 
-        /* ── Cards de cocina con acento lateral ── */
+        /* ── Cards de cocina con acento lateral y profundidad ── */
         .card-pendiente {
             border-left: 4px solid #f59e0b;
-            background: linear-gradient(to right, rgba(254,243,199,.22) 0%, transparent 90px);
+            background: linear-gradient(to right, rgba(254,243,199,.24) 0%, transparent 100px);
         }
         .card-preparando {
             border-left: 4px solid #3b82f6;
-            background: linear-gradient(to right, rgba(219,234,254,.22) 0%, transparent 90px);
+            background: linear-gradient(to right, rgba(219,234,254,.24) 0%, transparent 100px);
         }
         .card-listo {
             border-left: 4px solid #10b981;
-            background: linear-gradient(to right, rgba(209,250,229,.22) 0%, transparent 90px);
+            background: linear-gradient(to right, rgba(209,250,229,.24) 0%, transparent 100px);
         }
 
-        /* ── Tarjetas métricas con hover suave ── */
+        /* ── Tarjetas métricas estilo widget ── */
         .metric-card {
             transition: box-shadow 200ms var(--ease-ui), transform 150ms var(--ease-ui);
         }
         .metric-card:hover {
-            box-shadow: 0 6px 20px 0 rgba(15,23,42,.11);
+            box-shadow: 0 8px 24px 0 rgba(15,23,42,.09);
             transform: translateY(-2px);
         }
 
-        /* ── Botones con feedback táctil ── */
+        /* ── Botones con feedback táctil inmediato (§1 Kill Latency) ── */
         .btn-action {
-            transition: background-color 150ms var(--ease-ui), transform 100ms var(--ease-ui), box-shadow 150ms var(--ease-ui);
+            transition: background-color 150ms var(--ease-ui), transform 120ms var(--ease-spring), box-shadow 150ms var(--ease-ui);
         }
-        .btn-action:active { transform: scale(0.97); }
+        .btn-action:active { transform: scale(0.965); }
 
         /* ── Filas de tabla con hover suave ── */
         .tr-hover { transition: background-color 120ms var(--ease-ui); }
         .tr-hover:hover { background-color: rgb(248 250 252); }
 
-        /* ── Filtros de cocina ── */
+        /* ── Filtros de cocina estilo segmented control ── */
         .filter-btn {
-            transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui), transform 100ms var(--ease-ui);
+            transition: background-color 150ms var(--ease-ui), color 150ms var(--ease-ui), transform 120ms var(--ease-spring), box-shadow 150ms var(--ease-ui);
         }
-        .filter-btn:active { transform: scale(0.97); }
+        .filter-btn:active { transform: scale(0.965); }
 
-        /* ── Foco visible global ── */
-        :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 6px; }
+        /* ── Foco visible Apple-style ── */
+        :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 8px; }
 
         /* ── Separador de header admin ── */
-        .tab-bar-separator { border-top: 1px solid rgba(51,65,85,.8); }
+        .tab-bar-separator { border-top: 1px solid rgba(255, 255, 255, 0.08); }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen antialiased">
+<body class="bg-slate-100 text-slate-800 min-h-screen antialiased selection:bg-amber-100 selection:text-amber-900">
 
     <!-- ================= VISTA DE LOGIN ================= -->
-    <div id="view-login" class="min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200/80 p-8">
-            <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-500 text-white text-2xl shadow-md mb-3">
+    <div id="view-login" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-slate-100 to-slate-100">
+        <div class="apple-glass-card max-w-[420px] w-full rounded-[28px] p-8 sm:p-9 border border-white/80 transition-all duration-300">
+            <div class="text-center mb-7">
+                <div class="apple-squircle inline-flex items-center justify-center w-16 h-16 bg-gradient-to-b from-amber-400 to-amber-500 text-white text-3xl mb-3.5">
                     🍽️
                 </div>
-                <h1 class="text-2xl font-bold text-slate-900">El Pingüin</h1>
-                <p class="text-sm text-slate-500 mt-1">Inicia sesión con tu rol de Cocina o Administración</p>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight leading-tight">El Pingüin</h1>
+                <p class="text-[13px] text-slate-500 mt-1 font-medium">Inicia sesión con tu rol de Cocina o Administración</p>
             </div>
 
             <form id="form-login" class="space-y-4" onsubmit="handleLogin(event)">
-                <div id="login-error" class="hidden p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200"></div>
+                <div id="login-error" class="hidden p-3 bg-red-50/90 text-red-700 text-xs font-semibold rounded-xl border border-red-200"></div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Correo Electrónico</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Correo Electrónico</label>
                     <input type="email" id="login-email" required placeholder="cocina@restaurante.com"
-                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition text-sm">
+                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/90 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition text-sm text-slate-800 font-medium">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Contraseña</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Contraseña</label>
                     <input type="password" id="login-password" required placeholder="••••••••"
-                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition text-sm">
+                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/90 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition text-sm text-slate-800 font-medium">
                 </div>
 
-                <button type="submit" id="btn-login-submit"
-                    class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow transition duration-150 flex items-center justify-center gap-2">
-                    <span>Ingresar</span>
-                </button>
+                <div class="pt-1">
+                    <button type="submit" id="btn-login-submit"
+                        class="btn-action w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-[0_4px_14px_rgba(15,23,42,0.18)] flex items-center justify-center gap-2 text-sm">
+                        <span>Ingresar</span>
+                    </button>
+                </div>
             </form>
 
-
+            <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400 font-medium">
+                <span>🔒</span>
+                <span>Acceso seguro para personal autorizado</span>
+            </div>
         </div>
     </div>
 
 
     <!-- ================= VISTA DE COCINA ================= -->
     <div id="view-cocina" class="hidden min-h-screen flex flex-col bg-slate-100">
-        <!-- Barra Superior Cocina -->
-        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-lg">
+        <!-- Barra Superior Cocina (Apple Glass Nav) -->
+        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-xl shadow-sm shrink-0">🍳</div>
+                    <div class="apple-squircle w-9 h-9 bg-gradient-to-b from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-sm shrink-0">🍳</div>
                     <div>
-                        <h1 class="text-base font-bold leading-tight text-white">
+                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight">
                             Módulo de Cocina
                             <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 align-middle">En vivo</span>
                         </h1>
-                        <p class="text-[11px] text-slate-400 leading-none mt-0.5">Comandas en tiempo real · <span id="cocina-sync-text" class="text-emerald-400">Sincronizado</span></p>
+                        <p class="text-[11px] text-slate-400 leading-none mt-0.5 font-medium">Comandas en tiempo real · <span id="cocina-sync-text" class="text-emerald-400">Sincronizado</span></p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                         API móvil
                     </span>
 
                     <button onclick="fetchOrdenes()" title="Actualizar órdenes"
-                        class="btn-action px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5">
+                        class="btn-action px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700/80 flex items-center gap-1.5">
                         <span id="sync-icon">🔄</span> Actualizar
                     </button>
 
-                    <div class="h-5 w-px bg-slate-700 hidden sm:block"></div>
+                    <div class="h-5 w-px bg-slate-700/80 hidden sm:block"></div>
 
                     <button id="btn-return-admin" onclick="showView('admin')"
-                        class="hidden btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg">
+                        class="hidden btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-sm">
                         ⚙️ Admin
                     </button>
 
-                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-cocina">
+                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800/80 rounded-xl border border-slate-700/80" id="user-display-cocina">
                         Cocina
                     </span>
 
                     <button onclick="handleLogout()"
-                        class="btn-action px-3 py-1.5 bg-red-700/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg">
+                        class="btn-action px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold rounded-xl">
                         Salir
                     </button>
                 </div>
@@ -210,34 +249,34 @@
 
     <!-- ================= VISTA DE ADMINISTRACIÓN ================= -->
     <div id="view-admin" class="hidden min-h-screen flex flex-col bg-slate-100">
-        <!-- Barra Superior Admin -->
-        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-lg">
+        <!-- Barra Superior Admin (Apple Glass Nav) -->
+        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-xl shadow-sm shrink-0">⚙️</div>
+                    <div class="apple-squircle w-9 h-9 bg-gradient-to-b from-blue-500 to-blue-600 flex items-center justify-center text-xl shadow-sm shrink-0">⚙️</div>
                     <div>
-                        <h1 class="text-base font-bold leading-tight text-white">
+                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight">
                             Panel de Administración
                             <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 align-middle">Admin</span>
                         </h1>
-                        <p class="text-[11px] text-slate-400 leading-none mt-0.5">Menú · Mesas · Órdenes · Finanzas</p>
+                        <p class="text-[11px] text-slate-400 leading-none mt-0.5 font-medium">Menú · Mesas · Órdenes · Finanzas</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <button onclick="showView('cocina'); fetchOrdenes();"
-                        class="btn-action px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/30 flex items-center gap-1.5">
+                        class="btn-action px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded-xl border border-amber-500/30 flex items-center gap-1.5">
                         🍳 Cocina
                     </button>
                     <button onclick="loadAdminData()"
-                        class="btn-action px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700">
+                        class="btn-action px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700/80">
                         🔄 Recargar
                     </button>
-                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700" id="user-display-admin">
+                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800/80 rounded-xl border border-slate-700/80" id="user-display-admin">
                         Administrador
                     </span>
                     <button onclick="handleLogout()"
-                        class="btn-action px-3 py-1.5 bg-red-700/80 hover:bg-red-600 text-white text-xs font-medium rounded-lg">
+                        class="btn-action px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold rounded-xl">
                         Salir
                     </button>
                 </div>
