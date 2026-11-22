@@ -5,9 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Restaurante - Cocina & Administración</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            yellow: '#EBD140',
+                            red: '#C24840',
+                            blue: '#2879A8',
+                            dark: '#2E3C43',
+                            darker: '#222d33',
+                            light: '#fdfbf2',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -15,6 +33,10 @@
             -moz-osx-font-smoothing: grayscale;
         }
         :root {
+            --brand-yellow: #EBD140;
+            --brand-red: #C24840;
+            --brand-blue: #2879A8;
+            --brand-dark: #2E3C43;
             --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
             --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
             --ease-spring: cubic-bezier(0.2, 0, 0, 1);
@@ -29,48 +51,42 @@
 
         /* ── Optical Typography Tracking (Apple Design §15) ── */
         h1, h2, h3, .heading-apple { letter-spacing: -0.024em; }
-        .tracking-apple-sub { letter-spacing: 0.035em; }
 
-        /* ── Apple Translucent Materials (Apple Design §12) ── */
+        /* ── Apple Translucent Materials (Apple Design §12) con paleta #2E3C43 ── */
         .apple-glass-nav {
-            background: rgba(15, 23, 42, 0.86);
+            background: rgba(46, 60, 67, 0.90);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+            border-bottom: 1px solid rgba(235, 209, 64, 0.18);
         }
         .apple-glass-card {
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(20px) saturate(170%);
-            -webkit-backdrop-filter: blur(20px) saturate(170%);
-            box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
-        }
-        .apple-squircle {
-            border-radius: 22.5%;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 10px 20px -6px rgba(245, 158, 11, 0.35);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
         }
 
-        /* ── Tabs de administración con feedback fluido ── */
+        /* ── Tabs de administración con acento #EBD140 ── */
         .admin-tab-btn {
             border-bottom: 2px solid transparent;
             transition: color 150ms var(--ease-ui), border-bottom-color 150ms var(--ease-ui);
         }
         .admin-tab-btn.tab-active {
-            color: #fff !important;
-            border-bottom-color: #60a5fa !important;
+            color: #EBD140 !important;
+            border-bottom-color: #EBD140 !important;
         }
 
-        /* ── Cards de cocina con acento lateral y profundidad ── */
+        /* ── Cards de cocina con acento lateral de marca ── */
         .card-pendiente {
-            border-left: 4px solid #f59e0b;
-            background: linear-gradient(to right, rgba(254,243,199,.24) 0%, transparent 100px);
+            border-left: 4px solid #EBD140;
+            background: linear-gradient(to right, rgba(235, 209, 64, 0.16) 0%, transparent 110px);
         }
         .card-preparando {
-            border-left: 4px solid #3b82f6;
-            background: linear-gradient(to right, rgba(219,234,254,.24) 0%, transparent 100px);
+            border-left: 4px solid #2879A8;
+            background: linear-gradient(to right, rgba(40, 121, 168, 0.14) 0%, transparent 110px);
         }
         .card-listo {
             border-left: 4px solid #10b981;
-            background: linear-gradient(to right, rgba(209,250,229,.24) 0%, transparent 100px);
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.14) 0%, transparent 110px);
         }
 
         /* ── Tarjetas métricas estilo widget ── */
@@ -78,7 +94,7 @@
             transition: box-shadow 200ms var(--ease-ui), transform 150ms var(--ease-ui);
         }
         .metric-card:hover {
-            box-shadow: 0 8px 24px 0 rgba(15,23,42,.09);
+            box-shadow: 0 10px 25px -5px rgba(46, 60, 67, 0.12);
             transform: translateY(-2px);
         }
 
@@ -99,50 +115,57 @@
         .filter-btn:active { transform: scale(0.965); }
 
         /* ── Foco visible Apple-style ── */
-        :focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 8px; }
+        :focus-visible { outline: 2px solid #2879A8; outline-offset: 2px; border-radius: 8px; }
 
         /* ── Separador de header admin ── */
         .tab-bar-separator { border-top: 1px solid rgba(255, 255, 255, 0.08); }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen antialiased selection:bg-amber-100 selection:text-amber-900">
+<body class="bg-slate-100 text-[#2E3C43] min-h-screen antialiased selection:bg-[#EBD140]/40 selection:text-[#2E3C43]">
 
     <!-- ================= VISTA DE LOGIN ================= -->
-    <div id="view-login" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-slate-100 to-slate-100">
-        <div class="apple-glass-card max-w-[420px] w-full rounded-[28px] p-8 sm:p-9 border border-white/80 transition-all duration-300">
+    <div id="view-login" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#EBD140]/30 via-slate-100 to-[#2E3C43]/10 relative overflow-hidden">
+        <!-- Luces de fondo decorativas sutiles -->
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-[#EBD140]/30 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-[#2879A8]/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="apple-glass-card max-w-[430px] w-full rounded-[32px] p-8 sm:p-10 border border-white/80 shadow-[0_25px_60px_-15px_rgba(46,60,67,0.18),0_0_0_1px_rgba(46,60,67,0.06)] relative z-10 transition-all duration-300">
             <div class="text-center mb-7">
-                <div class="apple-squircle inline-flex items-center justify-center w-16 h-16 bg-gradient-to-b from-amber-400 to-amber-500 text-white text-3xl mb-3.5">
-                    🍽️
+                <!-- LOGO OFICIAL ANTOJERÍA PINGÜIN -->
+                <div class="relative inline-block mb-3.5">
+                    <img src="/logo.png" alt="Antojería Pingüin Logo"
+                         class="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full shadow-[0_12px_28px_-6px_rgba(46,60,67,0.35),0_0_0_4px_#EBD140] ring-4 ring-white mx-auto transform transition duration-300 hover:scale-105"
+                         onerror="this.src='/logo.jpg';">
                 </div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tight leading-tight">El Pingüin</h1>
-                <p class="text-[13px] text-slate-500 mt-1 font-medium">Inicia sesión con tu rol de Cocina o Administración</p>
+                <h1 class="text-2xl font-black text-[#2E3C43] tracking-tight leading-tight">Antojería Pingüin</h1>
+                <p class="text-xs font-semibold text-[#2879A8] uppercase tracking-wider mt-1">Buen Provecho · Cocina & Admin</p>
             </div>
 
             <form id="form-login" class="space-y-4" onsubmit="handleLogin(event)">
-                <div id="login-error" class="hidden p-3 bg-red-50/90 text-red-700 text-xs font-semibold rounded-xl border border-red-200"></div>
+                <div id="login-error" class="hidden p-3 bg-red-50 text-[#C24840] text-xs font-bold rounded-xl border border-red-200"></div>
 
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Correo Electrónico</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-[#2E3C43]/80 mb-1.5">Correo Electrónico</label>
                     <input type="email" id="login-email" required placeholder="cocina@restaurante.com"
-                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/90 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition text-sm text-slate-800 font-medium">
+                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/90 border border-slate-200 focus:bg-white focus:border-[#2879A8] focus:ring-4 focus:ring-[#2879A8]/15 outline-none transition text-sm text-[#2E3C43] font-medium">
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Contraseña</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-[#2E3C43]/80 mb-1.5">Contraseña</label>
                     <input type="password" id="login-password" required placeholder="••••••••"
-                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/80 border border-slate-200/90 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition text-sm text-slate-800 font-medium">
+                        class="w-full px-4 py-2.5 rounded-xl bg-slate-50/90 border border-slate-200 focus:bg-white focus:border-[#2879A8] focus:ring-4 focus:ring-[#2879A8]/15 outline-none transition text-sm text-[#2E3C43] font-medium">
                 </div>
 
-                <div class="pt-1">
+                <div class="pt-2">
                     <button type="submit" id="btn-login-submit"
-                        class="btn-action w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-[0_4px_14px_rgba(15,23,42,0.18)] flex items-center justify-center gap-2 text-sm">
-                        <span>Ingresar</span>
+                        class="btn-action w-full py-3.5 px-4 bg-[#2E3C43] hover:bg-[#222d33] active:scale-[0.97] text-white font-bold rounded-2xl shadow-[0_6px_20px_rgba(46,60,67,0.25)] flex items-center justify-center gap-2 text-sm border-t border-white/15">
+                        <span>Ingresar al Sistema</span>
                     </button>
                 </div>
             </form>
 
             <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400 font-medium">
-                <span>🔒</span>
+                <span class="w-2 h-2 rounded-full bg-[#EBD140]"></span>
                 <span>Acceso seguro para personal autorizado</span>
             </div>
         </div>
@@ -152,43 +175,45 @@
     <!-- ================= VISTA DE COCINA ================= -->
     <div id="view-cocina" class="hidden min-h-screen flex flex-col bg-slate-100">
         <!-- Barra Superior Cocina (Apple Glass Nav) -->
-        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-sm">
+        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="apple-squircle w-9 h-9 bg-gradient-to-b from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-sm shrink-0">🍳</div>
+                    <img src="/logo.png" alt="Antojería Pingüin"
+                         class="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-[#EBD140] shrink-0"
+                         onerror="this.src='/logo.jpg';">
                     <div>
-                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight">
+                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight flex items-center gap-2">
                             Módulo de Cocina
-                            <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 align-middle">En vivo</span>
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EBD140] text-[#2E3C43] shadow-sm uppercase tracking-wider">En vivo</span>
                         </h1>
-                        <p class="text-[11px] text-slate-400 leading-none mt-0.5 font-medium">Comandas en tiempo real · <span id="cocina-sync-text" class="text-emerald-400">Sincronizado</span></p>
+                        <p class="text-[11px] text-slate-300 leading-none mt-0.5 font-medium">Comandas en tiempo real · <span id="cocina-sync-text" class="text-[#EBD140] font-semibold">Sincronizado</span></p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                    <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-300 font-medium">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                         API móvil
                     </span>
 
                     <button onclick="fetchOrdenes()" title="Actualizar órdenes"
-                        class="btn-action px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700/80 flex items-center gap-1.5">
+                        class="btn-action px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl border border-white/15 flex items-center gap-1.5 backdrop-blur-sm">
                         <span id="sync-icon">🔄</span> Actualizar
                     </button>
 
-                    <div class="h-5 w-px bg-slate-700/80 hidden sm:block"></div>
+                    <div class="h-5 w-px bg-white/20 hidden sm:block"></div>
 
                     <button id="btn-return-admin" onclick="showView('admin')"
-                        class="hidden btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-sm">
+                        class="hidden btn-action px-3 py-1.5 bg-[#2879A8] hover:bg-[#20638a] text-white text-xs font-bold rounded-xl shadow-sm">
                         ⚙️ Admin
                     </button>
 
-                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800/80 rounded-xl border border-slate-700/80" id="user-display-cocina">
+                    <span class="text-xs text-white/90 font-medium px-2.5 py-1 bg-white/10 rounded-xl border border-white/10" id="user-display-cocina">
                         Cocina
                     </span>
 
                     <button onclick="handleLogout()"
-                        class="btn-action px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold rounded-xl">
+                        class="btn-action px-3 py-1.5 bg-[#C24840] hover:bg-[#a83c35] text-white text-xs font-bold rounded-xl shadow-sm">
                         Salir
                     </button>
                 </div>
@@ -198,38 +223,38 @@
         <!-- Contenido Cocina -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex-1 w-full">
 
-            <!-- Aviso de modo cocina compacto -->
+            <!-- Aviso de modo cocina compacto con colores de marca -->
             <div class="mb-5 flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-[11px] font-semibold text-amber-800">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#EBD140]/20 border border-[#EBD140]/40 rounded-full text-[11px] font-bold text-[#2E3C43]">
                     🍳 Modo Cocina — solo preparación
                 </span>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[11px] font-medium text-slate-500">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-200/80 border border-slate-300/80 rounded-full text-[11px] font-semibold text-slate-600">
                     🔒 Administración restringida
                 </span>
             </div>
 
-            <!-- Filtros Cocina -->
+            <!-- Filtros Cocina estilo Segmented Control -->
             <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1" id="cocina-filters">
                 <button onclick="setFilter('todas')" data-filter="todas"
-                    class="filter-btn active-filter px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 bg-slate-900 text-white shadow-sm whitespace-nowrap">
+                    class="filter-btn active-filter px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 bg-[#2E3C43] text-white shadow-sm whitespace-nowrap">
                     <span>📋 Todas</span>
                     <span id="badge-count-todas" class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 font-bold">0</span>
                 </button>
                 <button onclick="setFilter('pendiente')" data-filter="pendiente"
-                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-amber-50 border border-slate-200 whitespace-nowrap">
-                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-[#2E3C43] hover:bg-slate-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#EBD140] shrink-0 shadow-sm"></span>
                     <span>Pendientes</span>
-                    <span id="badge-count-pendiente" class="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">0</span>
+                    <span id="badge-count-pendiente" class="px-1.5 py-0.5 rounded-full text-[10px] bg-[#EBD140]/30 text-[#685305] font-bold">0</span>
                 </button>
                 <button onclick="setFilter('preparando')" data-filter="preparando"
-                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-blue-50 border border-slate-200 whitespace-nowrap">
-                    <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-[#2E3C43] hover:bg-slate-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#2879A8] shrink-0 shadow-sm"></span>
                     <span>En Preparación</span>
-                    <span id="badge-count-preparando" class="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 font-bold">0</span>
+                    <span id="badge-count-preparando" class="px-1.5 py-0.5 rounded-full text-[10px] bg-[#2879A8]/20 text-[#2879A8] font-bold">0</span>
                 </button>
                 <button onclick="setFilter('listo')" data-filter="listo"
-                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-slate-700 hover:bg-emerald-50 border border-slate-200 whitespace-nowrap">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-[#2E3C43] hover:bg-slate-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm"></span>
                     <span>Listas ✓</span>
                     <span id="badge-count-listo" class="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">0</span>
                 </button>
@@ -240,7 +265,7 @@
 
             <div id="ordenes-empty" class="hidden text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 p-8">
                 <span class="text-5xl block mb-3">✨</span>
-                <h3 class="text-lg font-bold text-slate-800">¡Todo al día en cocina!</h3>
+                <h3 class="text-lg font-bold text-[#2E3C43]">¡Todo al día en cocina!</h3>
                 <p class="text-sm text-slate-500 mt-1 max-w-xs mx-auto">No hay comandas activas en este momento.</p>
             </div>
         </main>
@@ -250,33 +275,35 @@
     <!-- ================= VISTA DE ADMINISTRACIÓN ================= -->
     <div id="view-admin" class="hidden min-h-screen flex flex-col bg-slate-100">
         <!-- Barra Superior Admin (Apple Glass Nav) -->
-        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-sm">
+        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="apple-squircle w-9 h-9 bg-gradient-to-b from-blue-500 to-blue-600 flex items-center justify-center text-xl shadow-sm shrink-0">⚙️</div>
+                    <img src="/logo.png" alt="Antojería Pingüin"
+                         class="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-[#2879A8] shrink-0"
+                         onerror="this.src='/logo.jpg';">
                     <div>
-                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight">
+                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight flex items-center gap-2">
                             Panel de Administración
-                            <span class="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 align-middle">Admin</span>
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#2879A8] text-white shadow-sm uppercase tracking-wider">Admin</span>
                         </h1>
-                        <p class="text-[11px] text-slate-400 leading-none mt-0.5 font-medium">Menú · Mesas · Órdenes · Finanzas</p>
+                        <p class="text-[11px] text-slate-300 leading-none mt-0.5 font-medium">Antojería Pingüin · Menú · Mesas · Finanzas</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <button onclick="showView('cocina'); fetchOrdenes();"
-                        class="btn-action px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold rounded-xl border border-amber-500/30 flex items-center gap-1.5">
+                        class="btn-action px-3 py-1.5 bg-[#EBD140] hover:bg-[#dfc635] text-[#2E3C43] text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
                         🍳 Cocina
                     </button>
                     <button onclick="loadAdminData()"
-                        class="btn-action px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700/80">
+                        class="btn-action px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl border border-white/15 backdrop-blur-sm">
                         🔄 Recargar
                     </button>
-                    <span class="text-xs text-slate-300 font-medium px-2.5 py-1 bg-slate-800/80 rounded-xl border border-slate-700/80" id="user-display-admin">
+                    <span class="text-xs text-white/90 font-medium px-2.5 py-1 bg-white/10 rounded-xl border border-white/10" id="user-display-admin">
                         Administrador
                     </span>
                     <button onclick="handleLogout()"
-                        class="btn-action px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold rounded-xl">
+                        class="btn-action px-3 py-1.5 bg-[#C24840] hover:bg-[#a83c35] text-white text-xs font-bold rounded-xl shadow-sm">
                         Salir
                     </button>
                 </div>
@@ -311,12 +338,12 @@
                 <button onclick="switchAdminTab('usuarios')" id="tab-btn-usuarios"
                     class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
                     👥 Usuarios
-                    <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-400/30">Pronto</span>
+                    <span class="text-[9px] bg-[#EBD140]/25 text-[#EBD140] px-1.5 py-0.5 rounded border border-[#EBD140]/40 font-bold">Pronto</span>
                 </button>
                 <button onclick="switchAdminTab('reportes')" id="tab-btn-reportes"
                     class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
                     📈 Reportes
-                    <span class="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-400/30">Pronto</span>
+                    <span class="text-[9px] bg-[#EBD140]/25 text-[#EBD140] px-1.5 py-0.5 rounded border border-[#EBD140]/40 font-bold">Pronto</span>
                 </button>
             </div>
         </header>
@@ -325,41 +352,45 @@
 
             <!-- 1. TAB: RESUMEN GENERAL -->
             <div id="tab-content-resumen" class="admin-tab-content space-y-6">
-                <!-- Tarjetas Métricas Clave — ventas destacada con borde superior -->
+                <!-- Tarjetas Métricas Clave con los 4 colores de la paleta -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="metric-card col-span-2 lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-emerald-500">
+                    <!-- 1. Total Recaudado / Ventas: #EBD140 (Dorado) -->
+                    <div class="metric-card col-span-2 lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-[#EBD140]">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Recaudado</span>
-                            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-base">💰</span>
+                            <span class="p-2 rounded-xl bg-[#EBD140]/20 text-[#685305] text-base font-bold">💰</span>
                         </div>
-                        <div class="text-3xl font-black text-slate-900 leading-none" id="metric-ventas">$0.00</div>
+                        <div class="text-3xl font-black text-[#2E3C43] leading-none" id="metric-ventas">$0.00</div>
                         <p class="text-xs text-slate-500 mt-2" id="metric-pagos-count">0 transacciones</p>
                     </div>
 
-                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <!-- 2. Órdenes: #2879A8 (Azul Océano) -->
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-[#2879A8]">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Órdenes</span>
-                            <span class="p-2 rounded-xl bg-blue-50 text-blue-600 text-base">📋</span>
+                            <span class="p-2 rounded-xl bg-[#2879A8]/15 text-[#2879A8] text-base">📋</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-ordenes">0</div>
+                        <div class="text-2xl font-black text-[#2E3C43] leading-none" id="metric-ordenes">0</div>
                         <p class="text-xs text-slate-500 mt-2" id="metric-ordenes-sub">0 activas / 0 cerradas</p>
                     </div>
 
-                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <!-- 3. Mesas: #2E3C43 (Pizarra Oscuro) -->
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-[#2E3C43]">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mesas</span>
-                            <span class="p-2 rounded-xl bg-purple-50 text-purple-600 text-base">🪑</span>
+                            <span class="p-2 rounded-xl bg-[#2E3C43]/10 text-[#2E3C43] text-base">🪑</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-mesas">0</div>
+                        <div class="text-2xl font-black text-[#2E3C43] leading-none" id="metric-mesas">0</div>
                         <p class="text-xs text-slate-500 mt-2" id="metric-mesas-sub">0 disponibles</p>
                     </div>
 
-                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <!-- 4. Platillos: #C24840 (Rojo Coral) -->
+                    <div class="metric-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm border-t-4 border-t-[#C24840]">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Platillos</span>
-                            <span class="p-2 rounded-xl bg-amber-50 text-amber-600 text-base">🍲</span>
+                            <span class="p-2 rounded-xl bg-[#C24840]/15 text-[#C24840] text-base">🍲</span>
                         </div>
-                        <div class="text-2xl font-extrabold text-slate-900 leading-none" id="metric-platillos">0</div>
+                        <div class="text-2xl font-black text-[#2E3C43] leading-none" id="metric-platillos">0</div>
                         <p class="text-xs text-slate-500 mt-2" id="metric-categorias">en 0 categorías</p>
                     </div>
                 </div>
@@ -648,7 +679,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeModalPlatillo()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
-                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Platillo</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-[#2E3C43] hover:bg-[#202c32] text-white rounded-xl font-semibold shadow">Guardar Platillo</button>
                 </div>
             </form>
         </div>
@@ -665,19 +696,19 @@
                 <input type="hidden" id="categoria-id">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Nombre de la Categoría *</label>
-                    <input type="text" id="categoria-nombre" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-amber-500 text-xs">
+                    <input type="text" id="categoria-nombre" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Descripción</label>
-                    <textarea id="categoria-descripcion" rows="2" class="w-full px-3 py-2 border rounded-xl outline-none focus:border-amber-500 text-xs"></textarea>
+                    <textarea id="categoria-descripcion" rows="2" class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs"></textarea>
                 </div>
                 <div class="flex items-center gap-2 pt-1">
-                    <input type="checkbox" id="categoria-activo" checked class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
+                    <input type="checkbox" id="categoria-activo" checked class="w-4 h-4 rounded text-[#2879A8] focus:ring-[#2879A8]">
                     <label for="categoria-activo" class="font-semibold text-slate-700">Categoría Activa</label>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeModalCategoria()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
-                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Categoría</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-[#2E3C43] hover:bg-[#202c32] text-white rounded-xl font-semibold shadow">Guardar Categoría</button>
                 </div>
             </form>
         </div>
@@ -694,11 +725,11 @@
                 <input type="hidden" id="mesa-id">
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Número de Mesa *</label>
-                    <input type="number" id="mesa-numero" min="1" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-amber-500 text-xs">
+                    <input type="number" id="mesa-numero" min="1" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Estado Inicial *</label>
-                    <select id="mesa-estado" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-amber-500 text-xs">
+                    <select id="mesa-estado" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
                         <option value="disponible">Disponible (Libre)</option>
                         <option value="ocupada">Ocupada</option>
                         <option value="reservada">Reservada</option>
@@ -707,7 +738,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeModalMesa()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
-                    <button type="submit" class="btn-action px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow">Guardar Mesa</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-[#2E3C43] hover:bg-[#202c32] text-white rounded-xl font-semibold shadow">Guardar Mesa</button>
                 </div>
             </form>
         </div>
@@ -999,10 +1030,10 @@
             currentFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 const isActive = btn.dataset.filter === filter;
-                btn.classList.toggle('bg-slate-900', isActive);
+                btn.classList.toggle('bg-[#2E3C43]', isActive);
                 btn.classList.toggle('text-white', isActive);
                 btn.classList.toggle('bg-white', !isActive);
-                btn.classList.toggle('text-slate-700', !isActive);
+                btn.classList.toggle('text-[#2E3C43]', !isActive);
             });
             renderOrders();
         }
@@ -1040,10 +1071,10 @@
 
                 if (orden.estado === 'preparando') {
                     cardClass  = 'card-preparando';
-                    badgeBg    = 'bg-blue-100 text-blue-900 border-blue-300';
+                    badgeBg    = 'bg-[#2879A8]/15 text-[#2879A8] border-[#2879A8]/30';
                     badgeText  = 'En Preparación';
                     badgeIcon  = '🔥';
-                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'listo')" class="btn-action w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow">✓ Marcar como Listo</button>`;
+                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'listo')" class="btn-action w-full py-3.5 px-4 bg-[#2879A8] hover:bg-[#20638a] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md">✓ Marcar como Listo</button>`;
                 } else if (orden.estado === 'listo') {
                     cardClass  = 'card-listo';
                     badgeBg    = 'bg-emerald-100 text-emerald-900 border-emerald-300';
@@ -1052,10 +1083,10 @@
                     btnAction  = `<div class="w-full py-3 px-4 bg-emerald-50 text-emerald-800 text-sm font-semibold rounded-xl text-center border-2 border-emerald-300">✅ Listo para servir</div>`;
                 } else {
                     cardClass  = 'card-pendiente';
-                    badgeBg    = 'bg-amber-100 text-amber-900 border-amber-300';
+                    badgeBg    = 'bg-[#EBD140]/30 text-[#685305] border-[#EBD140]/50';
                     badgeText  = 'Pendiente';
                     badgeIcon  = '⏳';
-                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'preparando')" class="btn-action w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow">🍳 Iniciar Preparación</button>`;
+                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'preparando')" class="btn-action w-full py-3.5 px-4 bg-[#EBD140] hover:bg-[#dfc635] text-[#2E3C43] font-black rounded-xl text-sm flex items-center justify-center gap-2 shadow-md">🍳 Iniciar Preparación</button>`;
                 }
 
                 const dateObj = new Date(orden.created_at);
@@ -1064,16 +1095,16 @@
                 const platillosHtml = (orden.detalles || []).map(d => `
                     <li class="py-2.5 border-b border-slate-100 last:border-none">
                         <div class="flex items-start gap-2.5">
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-900 text-white text-sm font-bold shrink-0">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2E3C43] text-white text-sm font-bold shrink-0">
                                 ${d.cantidad}x
                             </span>
-                            <span class="font-bold text-slate-900 text-sm leading-snug pt-1">
+                            <span class="font-bold text-[#2E3C43] text-sm leading-snug pt-1">
                                 ${d.platillo ? d.platillo.nombre : 'Platillo'}
                             </span>
                         </div>
                         ${d.notas ? `
-                            <div class="mt-1.5 ml-10 px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg flex items-start gap-1.5">
-                                <span class="shrink-0 text-amber-700 font-bold">Nota:</span>
+                            <div class="mt-1.5 ml-10 px-2.5 py-1.5 bg-[#EBD140]/15 border border-[#EBD140]/30 text-[#544304] text-xs rounded-lg flex items-start gap-1.5">
+                                <span class="shrink-0 text-[#C24840] font-bold">Nota:</span>
                                 <span class="font-medium">${d.notas}</span>
                             </div>
                         ` : ''}
@@ -1085,8 +1116,8 @@
                         <div>
                             <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xl font-black text-slate-900">#${orden.id}</span>
-                                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-white text-xs font-bold">
+                                    <span class="text-xl font-black text-[#2E3C43]">#${orden.id}</span>
+                                    <span class="px-2.5 py-0.5 rounded-lg bg-[#2E3C43] text-white text-xs font-bold">
                                         Mesa ${orden.mesa ? orden.mesa.numero : 'S/N'}
                                     </span>
                                 </div>
@@ -1161,14 +1192,14 @@
             document.getElementById('metric-platillos').innerText = allPlatillos.length;
             document.getElementById('metric-categorias').innerText = `en ${allCategorias.length} categorías activas`;
 
-            // Últimas órdenes resumen
+            // Últimas órdenes resumen con acentos de color de marca
             const stateColors = {
-                pendiente: 'border-l-amber-400',
-                preparando: 'border-l-blue-400',
+                pendiente: 'border-l-[#EBD140]',
+                preparando: 'border-l-[#2879A8]',
                 listo: 'border-l-emerald-500',
-                entregado: 'border-l-purple-400',
+                entregado: 'border-l-[#2E3C43]',
                 cerrada: 'border-l-slate-300',
-                cancelada: 'border-l-red-400'
+                cancelada: 'border-l-[#C24840]'
             };
             const ultimas = allAdminOrders.slice(0, 5);
             document.getElementById('resumen-ultimas-ordenes').innerHTML = ultimas.length ? ultimas.map(o => {
@@ -1177,12 +1208,12 @@
                 return `
                 <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs border-l-4 ${bc} pl-3">
                     <div class="flex items-center gap-2">
-                        <span class="font-extrabold text-slate-900">#${o.id}</span>
-                        <span class="text-slate-500">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</span>
+                        <span class="font-extrabold text-[#2E3C43]">#${o.id}</span>
+                        <span class="text-slate-500 font-medium">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</span>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass(o.estado)}">${estadoLabel}</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeClass(o.estado)}">${estadoLabel}</span>
                     </div>
                 </div>
             `}).join('') : '<p class="text-slate-400 text-xs">Sin órdenes recientes.</p>';
@@ -1192,8 +1223,8 @@
             document.getElementById('resumen-ultimos-pagos').innerHTML = ultimosPagos.length ? ultimosPagos.map(p => `
                 <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs">
                     <div class="flex flex-col gap-0.5">
-                        <span class="font-bold text-slate-800">Orden #${p.orden_id}</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wide self-start">${p.metodo}</span>
+                        <span class="font-bold text-[#2E3C43]">Orden #${p.orden_id}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#2879A8]/10 text-[#2879A8] uppercase tracking-wide self-start">${p.metodo}</span>
                     </div>
                     <span class="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
                         +$${parseFloat(p.monto).toFixed(2)}
@@ -1204,12 +1235,12 @@
 
         function badgeClass(estado) {
             switch(estado) {
-                case 'pendiente': return 'bg-amber-100 text-amber-800';
-                case 'preparando': return 'bg-blue-100 text-blue-800';
-                case 'listo': return 'bg-emerald-100 text-emerald-800';
-                case 'entregado': return 'bg-purple-100 text-purple-800';
-                case 'cerrada': return 'bg-slate-200 text-slate-800';
-                case 'cancelada': return 'bg-red-100 text-red-800';
+                case 'pendiente': return 'bg-[#EBD140]/25 text-[#6c5806] border border-[#EBD140]/40';
+                case 'preparando': return 'bg-[#2879A8]/15 text-[#2879A8] border border-[#2879A8]/30';
+                case 'listo': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+                case 'entregado': return 'bg-[#2E3C43]/15 text-[#2E3C43] border border-[#2E3C43]/20';
+                case 'cerrada': return 'bg-slate-200 text-slate-800 border border-slate-300';
+                case 'cancelada': return 'bg-[#C24840]/15 text-[#C24840] border border-[#C24840]/30';
                 default: return 'bg-slate-100 text-slate-700';
             }
         }
@@ -1238,8 +1269,8 @@
                         </span>
                     </td>
                     <td class="p-3.5 text-right space-x-1">
-                        <button onclick="editPlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs">Editar</button>
-                        <button onclick="deletePlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs">Eliminar</button>
+                        <button onclick="editPlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-[#2879A8]/10 hover:bg-[#2879A8]/20 text-[#2879A8] font-bold rounded-lg text-xs">Editar</button>
+                        <button onclick="deletePlatillo(${p.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#C24840] font-bold rounded-lg text-xs">Eliminar</button>
                     </td>
                 </tr>
             `).join('');
@@ -1343,8 +1374,8 @@
                         </span>
                     </td>
                     <td class="p-3.5 text-right space-x-1">
-                        <button onclick="editCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs">Editar</button>
-                        <button onclick="deleteCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-lg text-xs">Eliminar</button>
+                        <button onclick="editCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-[#2879A8]/10 hover:bg-[#2879A8]/20 text-[#2879A8] font-bold rounded-lg text-xs">Editar</button>
+                        <button onclick="deleteCategoria(${c.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#C24840] font-bold rounded-lg text-xs">Eliminar</button>
                     </td>
                 </tr>
             `).join('');
@@ -1422,33 +1453,33 @@
 
             grid.innerHTML = allMesas.map(m => {
                 const topBorder = {
-                    disponible: 'border-t-emerald-400',
-                    ocupada: 'border-t-blue-400',
-                    reservada: 'border-t-purple-400',
-                    fuera_servicio: 'border-t-red-400'
+                    disponible: 'border-t-emerald-500',
+                    ocupada: 'border-t-[#2879A8]',
+                    reservada: 'border-t-[#EBD140]',
+                    fuera_servicio: 'border-t-[#C24840]'
                 }[m.estado] || 'border-t-slate-200';
 
                 let statusBadge = {
                     disponible: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                    ocupada: 'bg-blue-100 text-blue-800 border-blue-200',
-                    reservada: 'bg-purple-100 text-purple-800 border-purple-200',
-                    fuera_servicio: 'bg-red-100 text-red-800 border-red-200'
+                    ocupada: 'bg-[#2879A8]/15 text-[#2879A8] border-[#2879A8]/30',
+                    reservada: 'bg-[#EBD140]/25 text-[#6c5806] border-[#EBD140]/40',
+                    fuera_servicio: 'bg-[#C24840]/15 text-[#C24840] border-[#C24840]/30'
                 }[m.estado] || 'bg-slate-100 text-slate-700';
 
                 return `
                     <div class="metric-card bg-white p-4 rounded-2xl border border-slate-200/80 border-t-4 ${topBorder} shadow-sm flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-2xl font-black text-slate-900">Mesa ${m.numero}</span>
-                                <button onclick="deleteMesa(${m.id})" title="Eliminar mesa" class="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg p-1.5 transition-colors duration-150 text-sm font-bold leading-none">&times;</button>
+                                <span class="text-2xl font-black text-[#2E3C43]">Mesa ${m.numero}</span>
+                                <button onclick="deleteMesa(${m.id})" title="Eliminar mesa" class="text-slate-400 hover:text-[#C24840] hover:bg-red-50 rounded-lg p-1.5 transition-colors duration-150 text-sm font-bold leading-none">&times;</button>
                             </div>
-                            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border mb-3 ${statusBadge}">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border mb-3 ${statusBadge}">
                                 ${m.estado.replace('_', ' ')}
                             </span>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase">Cambiar estado:</label>
-                            <select onchange="updateMesaEstado(${m.id}, this.value)" class="w-full text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-medium">
+                            <label class="block text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Cambiar estado:</label>
+                            <select onchange="updateMesaEstado(${m.id}, this.value)" class="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium focus:border-[#2879A8]">
                                 <option value="disponible" ${m.estado === 'disponible' ? 'selected' : ''}>Disponible</option>
                                 <option value="ocupada" ${m.estado === 'ocupada' ? 'selected' : ''}>Ocupada</option>
                                 <option value="reservada" ${m.estado === 'reservada' ? 'selected' : ''}>Reservada</option>
@@ -1537,8 +1568,8 @@
 
                 return `
                     <tr class="tr-hover">
-                        <td class="p-3.5 font-extrabold text-slate-900">#${o.id}</td>
-                        <td class="p-3.5 font-bold text-slate-700">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</td>
+                        <td class="p-3.5 font-extrabold text-[#2E3C43]">#${o.id}</td>
+                        <td class="p-3.5 font-bold text-[#2E3C43]">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</td>
                         <td class="p-3.5 text-slate-600">${o.user ? o.user.name : 'N/A'}</td>
                         <td class="p-3.5 font-extrabold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</td>
                         <td class="p-3.5">
@@ -1548,7 +1579,7 @@
                         </td>
                         <td class="p-3.5 text-slate-500">${fecha}</td>
                         <td class="p-3.5 text-right">
-                            <button onclick="verDetalleOrden(${o.id})" class="btn-action px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs">
+                            <button onclick="verDetalleOrden(${o.id})" class="btn-action px-3 py-1.5 bg-[#2879A8] hover:bg-[#20638a] text-white font-semibold rounded-lg text-xs shadow-sm">
                                 Ver Detalle
                             </button>
                         </td>
@@ -1606,11 +1637,11 @@
 
                 return `
                     <tr class="tr-hover">
-                        <td class="p-3.5 font-bold text-slate-500">#${p.id}</td>
-                        <td class="p-3.5 font-bold text-slate-800">Orden #${p.orden_id}</td>
+                        <td class="p-3.5 font-bold text-slate-400">#${p.id}</td>
+                        <td class="p-3.5 font-bold text-[#2E3C43]">Orden #${p.orden_id}</td>
                         <td class="p-3.5 text-slate-700 font-medium">Mesa ${mesaNum}</td>
                         <td class="p-3.5">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-slate-100 text-slate-700">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-[#2879A8]/10 text-[#2879A8]">
                                 ${p.metodo}
                             </span>
                         </td>
