@@ -20,14 +20,14 @@ class CategoriaController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
-            'activo' => 'boolean'
+            'activo' => 'boolean',
         ]);
 
         $categoria = Categoria::create($request->all());
 
         return response()->json([
             'mensaje' => 'Categoría registrada correctamente',
-            'categoria' => $categoria
+            'categoria' => $categoria,
         ], 201);
     }
 
@@ -35,9 +35,9 @@ class CategoriaController extends Controller
     {
         $categoria = Categoria::with('platillos')->find($id);
 
-        if (!$categoria) {
+        if (! $categoria) {
             return response()->json([
-                'mensaje' => 'Categoría no encontrada'
+                'mensaje' => 'Categoría no encontrada',
             ], 404);
         }
 
@@ -48,23 +48,23 @@ class CategoriaController extends Controller
     {
         $categoria = Categoria::find($id);
 
-        if (!$categoria) {
+        if (! $categoria) {
             return response()->json([
-                'mensaje' => 'Categoría no encontrada'
+                'mensaje' => 'Categoría no encontrada',
             ], 404);
         }
 
         $request->validate([
             'nombre' => 'sometimes|required|string|max:255',
             'descripcion' => 'nullable|string',
-            'activo' => 'boolean'
+            'activo' => 'boolean',
         ]);
 
         $categoria->update($request->all());
 
         return response()->json([
             'mensaje' => 'Categoría actualizada correctamente',
-            'categoria' => $categoria
+            'categoria' => $categoria,
         ]);
     }
 
@@ -72,22 +72,22 @@ class CategoriaController extends Controller
     {
         $categoria = Categoria::find($id);
 
-        if (!$categoria) {
+        if (! $categoria) {
             return response()->json([
-                'mensaje' => 'Categoría no encontrada'
+                'mensaje' => 'Categoría no encontrada',
             ], 404);
         }
 
         if ($categoria->platillos()->exists()) {
             return response()->json([
-                'mensaje' => 'No se puede eliminar una categoría que tenga platillos'
+                'mensaje' => 'No se puede eliminar una categoría que tenga platillos',
             ], 409);
         }
 
         $categoria->delete();
 
         return response()->json([
-            'mensaje' => 'Categoría eliminada correctamente'
+            'mensaje' => 'Categoría eliminada correctamente',
         ]);
     }
 }

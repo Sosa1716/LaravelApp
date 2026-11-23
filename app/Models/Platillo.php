@@ -12,7 +12,7 @@ class Platillo extends Model
         'descripcion',
         'precio',
         'imagen',
-        'disponible'
+        'disponible',
     ];
 
     public function categoria()

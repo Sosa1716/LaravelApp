@@ -12,17 +12,17 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'mensaje' => 'No autenticado'
+                'mensaje' => 'No autenticado',
             ], 401);
         }
 
         $rol = $user->role?->nombre;
 
-        if (!in_array($rol, $roles)) {
+        if (! in_array($rol, $roles)) {
             return response()->json([
-                'mensaje' => 'No tienes permiso para realizar esta acción'
+                'mensaje' => 'No tienes permiso para realizar esta acción',
             ], 403);
         }
 

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Mesa;
 use App\Models\Orden;
 use App\Models\OrdenDetalle;
 use App\Models\Platillo;
-use App\Models\Mesa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,10 +17,10 @@ class OrdenController extends Controller
         $ordenes = Orden::with([
             'mesa',
             'user',
-            'detalles.platillo'
+            'detalles.platillo',
         ])
-        ->latest()
-        ->get();
+            ->latest()
+            ->get();
 
         return response()->json($ordenes);
     }
@@ -34,7 +34,7 @@ class OrdenController extends Controller
 
             'items.*.platillo_id' => 'required|exists:platillos,id',
             'items.*.cantidad' => 'required|integer|min:1',
-            'items.*.notas' => 'nullable|string|max:500'
+            'items.*.notas' => 'nullable|string|max:500',
         ]);
 
         $orden = DB::transaction(function () use ($request, $datos) {
@@ -47,7 +47,7 @@ class OrdenController extends Controller
 
                 'estado' => 'pendiente',
 
-                'total' => 0
+                'total' => 0,
             ]);
 
             $total = 0;
@@ -68,17 +68,17 @@ class OrdenController extends Controller
                     'platillo_id' => $platillo->id,
                     'cantidad' => $item['cantidad'],
                     'precio' => $precio,
-                    'notas' => $item['notas'] ?? null
+                    'notas' => $item['notas'] ?? null,
                 ]);
             }
 
             $orden->update([
-                'total' => $total
+                'total' => $total,
             ]);
 
             Mesa::where('id', $datos['mesa_id'])
                 ->update([
-                    'estado' => 'ocupada'
+                    'estado' => 'ocupada',
                 ]);
 
             return $orden;
@@ -90,8 +90,8 @@ class OrdenController extends Controller
             'orden' => $orden->load([
                 'mesa',
                 'user',
-                'detalles.platillo'
-            ])
+                'detalles.platillo',
+            ]),
         ], 201);
     }
 
@@ -101,7 +101,7 @@ class OrdenController extends Controller
             $orden->load([
                 'mesa',
                 'user',
-                'detalles.platillo'
+                'detalles.platillo',
             ])
         );
     }
@@ -109,16 +109,16 @@ class OrdenController extends Controller
     public function updateEstado(Request $request, Orden $orden)
     {
         $datos = $request->validate([
-            'estado' => 'required|in:pendiente,preparando,listo,entregado,cancelada'
+            'estado' => 'required|in:pendiente,preparando,listo,entregado,cancelada',
         ]);
 
         $orden->update([
-            'estado' => $datos['estado']
+            'estado' => $datos['estado'],
         ]);
 
         return response()->json([
             'mensaje' => 'Estado actualizado correctamente',
-            'orden' => $orden
+            'orden' => $orden,
         ]);
     }
 }
