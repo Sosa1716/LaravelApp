@@ -87,10 +87,43 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ---
 
+## Fase 2 — Docker con FrankenPHP
+
+### P-06 · El contenedor ejecutaba `db:seed --force` en cada arranque
+- **Problema:** el `CMD` original corría los seeders cada vez que Render reiniciaba el contenedor (en el plan free, tras cada periodo de inactividad).
+- **Impacto:** `OrdenSeeder` **sobrescribe las órdenes 1-4 reales** y sus detalles; `UserSeeder` restablece los usuarios con contraseña `12345678` en producción.
+- **Solución:** `docker/entrypoint.sh` solo siembra si `SEED_ON_DEPLOY=true`. Producción usa `false`; staging (BD efímera) usa `true`.
+
+### P-07 · Servidor de desarrollo y permisos 777 en producción
+- **Problema:** se usaba `php artisan serve` (servidor embebido de PHP, un solo proceso, no apto para producción) y `chmod -R 777` como root.
+- **Solución:** imagen `dunglas/frankenphp:1-php8.3-bookworm` (Caddy + PHP 8.3) con `frankenphp php-server`, `php.ini-production` + OPcache sin validación de timestamps, y **usuario `app` (uid 10001) sin privilegios** que solo puede escribir en `storage`, `bootstrap/cache` y `database`.
+- **Verificación:** `docker exec ... id` → `uid=10001(app)`; `HEALTHCHECK` contra `/up` → `healthy`.
+
+### P-18 · `view:cache` fallaba en el build anterior
+- **Problema (histórico, commit `b1fe849`):** `.dockerignore` excluye `storage/framework/*`, así que en la imagen no existían `storage/framework/views` ni `cache`, y `view:cache` fallaba.
+- **Solución:** el `Dockerfile` crea los directorios de runtime y las cachés (`config`, `route`, `view`, `event`) se generan en el **entrypoint**, no en el build, para que lean las variables reales del entorno (Render las inyecta al arrancar).
+
+### P-19 · Imagen de una sola etapa con Composer y herramientas de build
+- **Solución:** build **multi-stage**: la etapa `vendor` (`composer:2`) instala dependencias sin dev; la etapa final solo copia `vendor/`, genera el autoloader optimizado (`--classmap-authoritative`) y **elimina el binario de Composer**.
+
+### P-20 · El puerto lo decide la plataforma en tiempo de ejecución
+- **Problema:** Render inyecta `PORT` al arrancar; un `CMD` en forma exec no expande variables.
+- **Solución:** el entrypoint hace `exec frankenphp php-server --listen ":${PORT}"` (por defecto 8080). El smoke test del CI arranca la imagen con `PORT=10000` para simular Render.
+
+### P-21 · Riesgo de copiar una base SQLite local a la imagen
+- **Solución:** `database/*.sqlite*` y `docker-compose.yml` añadidos a `.dockerignore`.
+
+### P-22 · Contenedor arrancaba sin `APP_KEY` y fallaba en la primera petición
+- **Solución:** el entrypoint valida `APP_KEY` y termina con un mensaje claro si falta. Las migraciones se reintentan hasta 10 veces (la BD gestionada puede tardar en aceptar conexiones).
+
+**Verificación local realizada:** `docker compose up` (FrankenPHP + PostgreSQL 16) → reinicio del contenedor con re-seed → `POST /api/ordenes` = **201** (P-12 corregido también en la imagen) y sin duplicar detalles.
+
+**En el pipeline:** job `docker` → build con caché de GitHub Actions, smoke test del contenedor (`/up`, `/api/version` = SHA del commit, login 200, usuario no-root), push a **GHCR** (`sha-<commit>`, `<rama>`, `latest` en `main`) con SBOM y provenance, y artefacto `docker-build` (`build-info.json`, tags, reporte del smoke test).
+
+---
+
 ## Pendientes detectados (se resuelven en fases posteriores)
 
 | ID | Problema | Fase |
 |----|----------|------|
-| P-06 | `Dockerfile` ejecuta `db:seed --force` en **cada arranque** (duplica datos / crea usuarios con contraseña `12345678` en producción). | 2 |
-| P-07 | Se usa `php artisan serve` (servidor de desarrollo) y `chmod 777` en la imagen. | 2 |
 | P-09 | No existe entorno de staging en Render. | 3 |
