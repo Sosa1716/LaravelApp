@@ -1,12 +1,26 @@
-# render.yaml — Blueprint de Render.com
-# Render detecta este archivo y configura el servicio automáticamente.
-# Docs: https://render.com/docs/blueprint-spec
+# render.yaml — Blueprint de Render.com (https://render.com/docs/blueprint-spec)
+#
+# Dos servicios Docker construidos con el mismo Dockerfile (FrankenPHP):
+#   el-pinguin-api          → rama main    → producción (PostgreSQL gestionado)
+#   el-pinguin-api-staging  → rama staging → staging (SQLite efímero, re-sembrado)
+#
+# autoDeploy: false  → Render NO despliega solo al recibir un push. El deploy lo
+# dispara GitHub Actions (Deploy Hook) únicamente cuando el CI pasa.
+#
+# Secretos (sync: false): se cargan a mano en el panel de Render, nunca en git.
 
 services:
+  # ---------------------------------------------------------------------------
+  # Producción
+  # ---------------------------------------------------------------------------
   - type: web
     name: el-pinguin-api
     runtime: docker
     plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    autoDeploy: false
+    healthCheckPath: /up
     envVars:
       - key: APP_NAME
         value: "El Pinguin"
@@ -14,8 +28,7 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
-      # Secreto: NO versionar. Se define manualmente en el panel de Render
-      # (generar con: php artisan key:generate --show).
+      # Generar con: php artisan key:generate --show
       - key: APP_KEY
         sync: false
       - key: APP_URL
@@ -45,6 +58,9 @@ services:
         fromDatabase:
           name: el-pinguin-db
           property: password
+      # Nunca re-sembrar producción (ver docs/problemas.md, P-06).
+      - key: SEED_ON_DEPLOY
+        value: "false"
       - key: SESSION_DRIVER
         value: cookie
       - key: CACHE_STORE
@@ -56,9 +72,52 @@ services:
       - key: LOG_LEVEL
         value: error
 
+  # ---------------------------------------------------------------------------
+  # Staging
+  # El plan free de Render permite una sola base PostgreSQL por cuenta, así que
+  # staging usa SQLite dentro del contenedor: se recrea y se siembra en cada
+  # deploy, lo que da datos conocidos para la verificación automática.
+  # La compatibilidad con PostgreSQL ya la garantiza la matriz de CI.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: el-pinguin-api-staging
+    runtime: docker
+    plan: free
+    branch: staging
+    dockerfilePath: ./Dockerfile
+    autoDeploy: false
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: "El Pinguin (staging)"
+      - key: APP_ENV
+        value: staging
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        fromService:
+          type: web
+          name: el-pinguin-api-staging
+          property: host
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: SEED_ON_DEPLOY
+        value: "true"
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: debug
+
 databases:
   - name: el-pinguin-db
     plan: free
     databaseName: elpinguin
     user: elpinguin_user
-

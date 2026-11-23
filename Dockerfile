@@ -1,34 +1,84 @@
-FROM php:8.2-cli
+# syntax=docker/dockerfile:1
+# =============================================================================
+#  El Pinguin API — imagen de producción (Laravel 12 + FrankenPHP)
+#
+#  Etapa 1 (vendor):  instala dependencias de Composer sin dev.
+#  Etapa 2 (runtime): FrankenPHP (Caddy + PHP 8.3) con usuario no-root.
+#
+#  Variables de ejecución relevantes:
+#    PORT            puerto HTTP (Render lo inyecta; por defecto 8080)
+#    APP_KEY         obligatoria
+#    SEED_ON_DEPLOY  "true" solo en entornos efímeros (staging); en prod "false"
+# =============================================================================
 
-# Instalar extensiones necesarias para PostgreSQL y Laravel
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpq-dev libonig-dev libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql mbstring zip opcache \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+ARG PHP_VERSION=8.3
 
-# Instalar Composer
+# ---------------------------------------------------------------------------
+# Etapa 1: dependencias PHP
+# ---------------------------------------------------------------------------
+FROM composer:2 AS vendor
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+# --no-scripts/--no-autoloader: el código aún no está copiado; el autoloader
+# optimizado se genera en la etapa final. --ignore-platform-reqs porque las
+# extensiones se instalan en la imagen runtime, no en esta.
+RUN composer install \
+        --no-dev --no-scripts --no-autoloader \
+        --prefer-dist --no-interaction --no-progress \
+        --ignore-platform-reqs
+
+# ---------------------------------------------------------------------------
+# Etapa 2: runtime
+# ---------------------------------------------------------------------------
+FROM dunglas/frankenphp:1-php${PHP_VERSION}-bookworm AS runtime
+
+ARG APP_VERSION=dev
+ARG UID=10001
+
+LABEL org.opencontainers.image.title="el-pinguin-api" \
+      org.opencontainers.image.description="API REST de El Pinguin (Laravel 12 + FrankenPHP)" \
+      org.opencontainers.image.licenses="MIT"
+
+# Extensiones: PostgreSQL (prod), SQLite (staging/local), resto para Laravel.
+RUN install-php-extensions pdo_pgsql pdo_sqlite intl zip opcache bcmath pcntl \
+    && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+COPY docker/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www
+WORKDIR /app
 
-# Copiar archivos del proyecto
+COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
-# Instalar dependencias PHP (sin dev, optimizado)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Autoloader optimizado + package:discover (post-autoload-dump) y directorios
+# de runtime que no se versionan (su ausencia rompía view:cache, ver P-07).
+RUN composer dump-autoload --optimize --classmap-authoritative --no-dev --no-interaction \
+    && mkdir -p storage/app/public storage/logs \
+                storage/framework/cache/data storage/framework/sessions storage/framework/views \
+                bootstrap/cache \
+    && rm -f /usr/bin/composer
 
-# Crear directorios necesarios y dar permisos
-RUN mkdir -p storage/logs \
-             storage/framework/cache \
-             storage/framework/sessions \
-             storage/framework/views \
-             bootstrap/cache \
-    && chmod -R 777 storage bootstrap/cache
+# Usuario sin privilegios: solo puede escribir en storage, bootstrap/cache,
+# database (SQLite de staging) y los directorios de datos de Caddy.
+RUN useradd --uid ${UID} --no-create-home --shell /usr/sbin/nologin app \
+    && chown -R app:app storage bootstrap/cache database /data/caddy /config/caddy \
+    && chmod -R ug+rwX,o-rwx storage bootstrap/cache database
 
-EXPOSE 10000
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint
 
-# IMPORTANTE: usar comillas simples en el CMD para que $PORT se expanda
-# en TIEMPO DE EJECUCIÓN (cuando Render ya lo tiene disponible),
-# no en tiempo de build.
-CMD ["/bin/bash", "-c", "php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=$PORT"]
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    APP_VERSION=${APP_VERSION} \
+    LOG_CHANNEL=stderr \
+    PORT=8080
 
+USER app
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT}/up" > /dev/null || exit 1
+
+ENTRYPOINT ["entrypoint"]

@@ -22,3 +22,5 @@ tests
 .agents
 .codex-build
 skills-lock.json
+database/*.sqlite*
+docker-compose.yml

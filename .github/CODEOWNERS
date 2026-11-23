@@ -1,0 +1,8 @@
+# Responsables por defecto de revisar cualquier cambio.
+*                       @Sosa1716
+
+# Infraestructura y pipeline: cambios sensibles (deploy, secretos, imagen).
+/.github/               @Sosa1716
+/Dockerfile             @Sosa1716
+/docker/                @Sosa1716
+/render.yaml            @Sosa1716
