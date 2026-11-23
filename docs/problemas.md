@@ -38,6 +38,27 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 - **Impacto:** riesgo de copiar un `.env` local con secretos a la imagen y tamaño de imagen mayor.
 - **Solución:** se añadieron esas rutas (se mantiene `.env.example`).
 
+### P-10 · Código sin formato estándar (Pint)
+- **Problema:** `laravel/pint` estaba instalado pero nunca se había ejecutado; `pint --test` fallaba en 32 archivos.
+- **Impacto:** el job de *lint* del CI fallaría desde el primer commit.
+- **Solución:** se ejecutó `vendor/bin/pint` (preset `laravel`) en un commit aislado de solo formato (`style: ...`), sin cambios de comportamiento. A partir de ahora el CI ejecuta `pint --test`.
+
+### P-11 · Dependencias con vulnerabilidades conocidas
+- **Problema:** `composer audit` reportó CVEs en `laravel/framework` 12.69.3 (CVE-2026-128083, corregido en 12.71) y en `symfony/http-foundation` / `symfony/http-kernel` 7.4.20 (Trusted Proxies, generación de URLs con host del cliente, etc.).
+- **Impacto:** vulnerabilidades explotables en producción.
+- **Solución:** `composer update` dentro de las restricciones de `composer.json` (sin saltos de versión mayor), resuelto con PHP 8.2 para mantener compatibilidad. `laravel/framework` → 12.73.0, `symfony/*` → 7.4.23. `composer audit` queda limpio y se ejecuta en cada pipeline.
+
+### P-12 · Crear órdenes fallaba con 500 en PostgreSQL (bug de producción)
+- **Problema:** `OrdenSeeder` inserta órdenes con IDs explícitos (1-4). PostgreSQL no avanza la secuencia `ordenes_id_seq` con inserts de ID explícito, así que el siguiente `Orden::create()` desde la API intenta usar `id=1` → `SQLSTATE[23505] duplicate key value violates unique constraint "ordenes_pkey"`.
+- **Cómo se detectó:** al ejecutar la suite contra PostgreSQL 16 (Docker) en lugar de SQLite: `MobileSyncTest` respondía 500 en `POST /api/ordenes`. En SQLite no ocurre, por eso nunca se había visto.
+- **Impacto:** en Render (PostgreSQL) los meseros no podían registrar órdenes nuevas después del seed.
+- **Solución:** al final de `OrdenSeeder`, si el driver es `pgsql`, se ejecuta `setval(pg_get_serial_sequence('ordenes','id'), MAX(id))`. Lección: el CI debe probar contra el mismo motor que producción (ver matriz de la Fase 1).
+
+### P-13 · Las pruebas fallaban sin `.env` (`MissingAppKeyException`)
+- **Problema:** `ExampleTest` (`GET /`) falla con *No application encryption key has been specified* si no existe `.env` con `APP_KEY`.
+- **Impacto:** en un runner limpio de CI la suite no pasa.
+- **Solución:** el pipeline ejecuta `cp .env.example .env && php artisan key:generate` antes de las pruebas.
+
 ---
 
 ## Pendientes detectados (se resuelven en fases posteriores)
