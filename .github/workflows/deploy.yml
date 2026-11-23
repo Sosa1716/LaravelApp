@@ -86,7 +86,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Matriz completa (3 SO) en pushes a develop/staging/main y en ejecución
+        # manual. En PRs solo Ubuntu: en repos privados Windows cuesta 2× y
+        # macOS 10× minutos de Actions (ver docs/problemas.md, P-32).
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest","macos-latest"]') }}
         php: ['8.2', '8.3']
         db: [sqlite, pgsql]
         include:
