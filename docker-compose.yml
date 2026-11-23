@@ -1,0 +1,50 @@
+# Entorno local equivalente a producción: misma imagen FrankenPHP + PostgreSQL 16.
+#
+#   cp .env.example .env && php artisan key:generate   (o define APP_KEY abajo)
+#   docker compose up --build
+#   -> http://localhost:8080/up   y   http://localhost:8080/api/version
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_VERSION: local
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY:?Define APP_KEY en tu .env (php artisan key:generate --show)}
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: elpinguin
+      DB_USERNAME: elpinguin
+      DB_PASSWORD: elpinguin
+      SESSION_DRIVER: cookie
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      SEED_ON_DEPLOY: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: elpinguin
+      POSTGRES_USER: elpinguin
+      POSTGRES_PASSWORD: elpinguin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elpinguin -d elpinguin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

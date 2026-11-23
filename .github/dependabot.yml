@@ -1,0 +1,50 @@
+# Actualizaciones automáticas de dependencias. Los PRs van a develop para
+# pasar por el mismo flujo (CI → staging → main) que cualquier otro cambio.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies, php]
+    groups:
+      laravel:
+        patterns: ["laravel/*"]
+      symfony:
+        patterns: ["symfony/*"]
+      dev-tools:
+        dependency-type: development
+
+  - package-ecosystem: npm
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencies, javascript]
+    groups:
+      frontend:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, docker]

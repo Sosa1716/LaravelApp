@@ -25,7 +25,7 @@ return new class extends Migration
                 'listo',
                 'entregado',
                 'cancelada',
-                'cerrada'
+                'cerrada',
             ])->default('pendiente');
 
             $table->decimal('total', 10, 2)->default(0);

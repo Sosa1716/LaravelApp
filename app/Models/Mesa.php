@@ -8,6 +8,6 @@ class Mesa extends Model
 {
     protected $fillable = [
         'numero',
-        'estado'
+        'estado',
     ];
 }
