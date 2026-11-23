@@ -145,3 +145,18 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ### P-27 · Secretos de despliegue por entorno
 - **Solución:** GitHub **Environments** `staging` y `production`, cada uno con su secret `RENDER_DEPLOY_HOOK_URL` y su variable `APP_URL`. `production` exige **aprobación manual** (required reviewers). Si falta configuración, el job falla con un mensaje explícito en lugar de "pasar" en silencio.
+
+---
+
+## Fase 4 — Gobernanza del repositorio
+
+### P-28 · Cualquiera podía hacer push directo a `main`/`staging`
+- **Problema:** sin reglas de protección, un push directo salta el CI y (con el CD) desplegaría sin revisión.
+- **Solución:** protección de ramas `main`, `staging` y `develop`: PR obligatorio, check requerido **`CI OK`** (ver P-16), rama actualizada antes de fusionar, sin force-push ni borrado. En `main` y `staging` además se exige 1 aprobación y que las conversaciones estén resueltas.
+
+### P-29 · Dependencias sin mantenimiento automático
+- **Problema:** las vulnerabilidades de P-11 se acumularon porque nadie actualizaba dependencias.
+- **Solución:** `.github/dependabot.yml` semanal para **composer**, **npm**, **github-actions** y **docker** (imagen base de FrankenPHP). Los PRs apuntan a `develop` y se agrupan (laravel/*, symfony/*, dev) para no saturar el repo.
+
+### P-30 · PRs e issues sin estructura
+- **Solución:** plantilla de PR con checklist (Pint, pruebas, migraciones en SQLite **y** PostgreSQL, variables de entorno, bitácora, changelog), formularios de issue (bug y funcionalidad, con el entorno y la versión de `/api/version`) y `CODEOWNERS` para la revisión obligatoria de la infraestructura (`.github/`, `Dockerfile`, `docker/`, `render.yaml`).
