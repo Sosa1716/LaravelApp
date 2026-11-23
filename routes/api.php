@@ -1,21 +1,26 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PlatilloController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\MesaController;
 use App\Http\Controllers\Api\OrdenController;
 use App\Http\Controllers\Api\PagoController;
+use App\Http\Controllers\Api\PlatilloController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+
+// Público: usado por el pipeline de CI/CD para verificar qué commit está desplegado.
+Route::get('/version', fn () => response()->json([
+    'app' => config('app.name'),
+    'env' => config('app.env'),
+    'version' => config('app.version'),
+]));
 
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
-
 
     // CONSULTAS GENERALES
     Route::get('/platillos', [PlatilloController::class, 'index']);
@@ -26,7 +31,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/mesas', [MesaController::class, 'index']);
     Route::get('/mesas/{mesa}', [MesaController::class, 'show']);
-
 
     // ADMINISTRADOR
     Route::middleware('role:Administrador')->group(function () {
@@ -44,7 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/mesas/{mesa}', [MesaController::class, 'destroy']);
     });
 
-
     // ÓRDENES
     Route::get('/ordenes', [OrdenController::class, 'index'])
         ->middleware('role:Administrador,Mesero,Cocina');
@@ -57,7 +60,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/ordenes/{orden}/estado', [OrdenController::class, 'updateEstado'])
         ->middleware('role:Administrador,Mesero,Cocina');
-
 
     // PAGOS
     Route::get('/pagos', [PagoController::class, 'index'])

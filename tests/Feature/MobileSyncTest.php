@@ -2,12 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Mesa;
 use App\Models\Platillo;
-use App\Models\Orden;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class MobileSyncTest extends TestCase
 {
@@ -27,7 +26,7 @@ class MobileSyncTest extends TestCase
             'password' => '12345678',
         ], [
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
         ]);
 
         $loginResponse->assertStatus(200)
@@ -48,9 +47,9 @@ class MobileSyncTest extends TestCase
                 [
                     'platillo_id' => $platillo->id,
                     'cantidad' => 2,
-                    'notas' => 'Pedido enviado desde celular'
-                ]
-            ]
+                    'notas' => 'Pedido enviado desde celular',
+                ],
+            ],
         ]);
 
         $ordenResponse->assertStatus(201)
@@ -61,7 +60,7 @@ class MobileSyncTest extends TestCase
         // 3. Mesa pasa a ocupada automáticamente
         $this->assertDatabaseHas('mesas', [
             'id' => $mesa->id,
-            'estado' => 'ocupada'
+            'estado' => 'ocupada',
         ]);
 
         // 4. La Cocina (desde la web con su Bearer Token) consulta las órdenes y la comanda aparece

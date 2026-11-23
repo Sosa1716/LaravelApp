@@ -1,0 +1,549 @@
+# =============================================================================
+#  Pipeline único de CI/CD — El Pinguin API (Laravel 12)
+#
+#  Flujo de ramas:  feature/* ──PR──▶ develop ──PR──▶ staging ──PR──▶ main
+#
+#   lint ─┐
+#         ├─▶ ci-ok ─┬─▶ package ──────┐
+#   tests ┘ (3×2×2)  └─▶ docker (GHCR) ┴─▶ deploy ──▶ release v1.0.0
+#                                           │          (solo staging y solo si
+#                          staging ◀────────┤           la verificación pasa)
+#                          production ◀─────┘ (aprobación manual)
+#
+#  PRs y develop: CI + build/smoke de la imagen (sin publicar ni desplegar).
+#  Push a staging: publica imagen, despliega en Render staging, verifica, release.
+#  Push a main:    publica imagen (latest) y despliega a producción tras aprobación.
+# =============================================================================
+name: CI/CD
+
+on:
+  push:
+    branches: [develop, staging, main]
+  pull_request:
+    branches: [develop, staging, main]
+  workflow_dispatch:
+
+# Un solo pipeline activo por rama/PR. En PRs se cancela el anterior; en pushes
+# a ramas de despliegue NO, para no cortar un deploy a la mitad.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PHP_EXTENSIONS: mbstring, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, zip, intl, fileinfo, bcmath
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Calidad de código y seguridad de dependencias
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint y auditoría
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validar composer.json / composer.lock
+        run: composer validate --strict
+
+      - name: Caché de Composer
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-8.2-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-8.2-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Estilo de código (Laravel Pint)
+        run: vendor/bin/pint --test
+
+      - name: Auditoría de seguridad (composer audit)
+        run: composer audit --no-interaction
+
+  # ---------------------------------------------------------------------------
+  # Pruebas: matriz multiplataforma  SO × PHP × motor de BD  (12 combinaciones)
+  # ---------------------------------------------------------------------------
+  tests:
+    name: Tests (${{ matrix.os }}, PHP ${{ matrix.php }}, ${{ matrix.db }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # Matriz completa (3 SO) en pushes a develop/staging/main y en ejecución
+        # manual. En PRs solo Ubuntu: en repos privados Windows cuesta 2× y
+        # macOS 10× minutos de Actions (ver docs/problemas.md, P-32).
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest","macos-latest"]') }}
+        php: ['8.2', '8.3']
+        db: [sqlite, pgsql]
+        include:
+          # La cobertura se mide en una sola combinación (la más rápida).
+          - os: ubuntu-latest
+            php: '8.3'
+            db: sqlite
+            coverage: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
+          tools: composer:v2
+
+      - name: Ruta de caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Caché de Composer
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-${{ matrix.php }}-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Preparar entorno (.env + APP_KEY)
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      # PostgreSQL en los 3 sistemas operativos (los service containers de
+      # GitHub solo funcionan en Linux, por eso se usa esta acción).
+      - name: Levantar PostgreSQL
+        if: matrix.db == 'pgsql'
+        uses: ikalnytskyi/action-setup-postgres@v6
+        with:
+          username: laravel
+          password: secret
+          database: testing
+          port: 5432
+
+      - name: Configurar conexión PostgreSQL
+        if: matrix.db == 'pgsql'
+        run: |
+          {
+            echo "DB_CONNECTION=pgsql"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_PORT=5432"
+            echo "DB_DATABASE=testing"
+            echo "DB_USERNAME=laravel"
+            echo "DB_PASSWORD=secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Ejecutar pruebas
+        run: |
+          mkdir -p reports
+          if [ "${{ matrix.coverage }}" = "true" ]; then
+            php vendor/bin/phpunit --log-junit reports/junit.xml \
+              --coverage-text --coverage-clover reports/clover.xml --coverage-html reports/coverage-html
+          else
+            php vendor/bin/phpunit --log-junit reports/junit.xml
+          fi
+
+      - name: Subir resultados de pruebas
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results-${{ matrix.os }}-php${{ matrix.php }}-${{ matrix.db }}
+          path: reports/junit.xml
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Subir reporte de cobertura
+        if: matrix.coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: |
+            reports/clover.xml
+            reports/coverage-html
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Puerta única de CI: es el check que exige la protección de ramas.
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [lint, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar resultado de lint y tests
+        run: |
+          echo "lint=${{ needs.lint.result }}  tests=${{ needs.tests.result }}"
+          [ "${{ needs.lint.result }}" = "success" ] && [ "${{ needs.tests.result }}" = "success" ]
+
+  # ---------------------------------------------------------------------------
+  # Paquete de la aplicación (código + vendor de producción) como artefacto.
+  # ---------------------------------------------------------------------------
+  package:
+    name: Empaquetar aplicación
+    needs: ci-ok
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Instalar dependencias de producción
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction
+
+      - name: Crear tarball
+        run: |
+          mkdir -p dist
+          tar --exclude=.git --exclude=.github --exclude=tests --exclude=node_modules \
+              --exclude=dist --exclude=.env --exclude='storage/logs/*' \
+              -czf "dist/el-pinguin-api-${GITHUB_SHA::7}.tar.gz" .
+          sha256sum dist/*.tar.gz | tee dist/SHA256SUMS.txt
+
+      - name: Subir artefacto de la aplicación
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-release
+          path: dist/
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Imagen Docker: build → smoke test del contenedor → push a GHCR
+  # (en PRs solo se construye y prueba; se publica únicamente en pushes)
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Imagen Docker (build, smoke test, GHCR)
+    needs: ci-ok
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.img.outputs.name }}
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Nombre de la imagen (GHCR exige minúsculas)
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Metadatos y tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.img.outputs.name }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build (carga local para smoke test)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: el-pinguin:ci
+          build-args: APP_VERSION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test del contenedor
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          # PORT=10000 simula a Render, que inyecta el puerto en tiempo de ejecución.
+          docker run -d --name smoke -p 10000:10000 \
+            -e PORT=10000 -e APP_KEY="$APP_KEY" \
+            -e DB_CONNECTION=sqlite -e SEED_ON_DEPLOY=true \
+            -e SESSION_DRIVER=cookie -e CACHE_STORE=file \
+            el-pinguin:ci
+
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:10000/up > /dev/null && break
+            sleep 2
+          done
+
+          {
+            echo "== Smoke test de la imagen ${GITHUB_SHA}"
+            echo "GET /up          -> $(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/up)"
+            echo "GET /api/version -> $(curl -s http://localhost:10000/api/version)"
+          } | tee reports/smoke-container.txt
+
+          curl -fsS http://localhost:10000/up > /dev/null
+          curl -fsS http://localhost:10000/api/version | grep -q "\"version\":\"${GITHUB_SHA}\""
+
+          login=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:10000/api/login \
+            -H 'Accept: application/json' -H 'Content-Type: application/json' \
+            -d '{"email":"admin@restaurante.com","password":"12345678"}')
+          echo "POST /api/login  -> $login" | tee -a reports/smoke-container.txt
+          [ "$login" = "200" ]
+
+          [ "$(docker inspect --format '{{.Config.User}}' el-pinguin:ci)" = "app" ] \
+            && echo "Usuario del contenedor: app (no root)" | tee -a reports/smoke-container.txt
+
+      - name: Logs del contenedor (si falló)
+        if: failure()
+        run: docker logs smoke || true
+
+      - name: Login en GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push a GHCR
+        id: push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_VERSION=${{ github.sha }}
+          cache-from: type=gha
+          provenance: true
+          sbom: true
+
+      - name: Información del build
+        if: always()
+        run: |
+          mkdir -p reports
+          cat > reports/build-info.json <<EOF
+          {
+            "image": "${{ steps.img.outputs.name }}",
+            "digest": "${{ steps.push.outputs.digest }}",
+            "pushed": ${{ github.event_name == 'push' }},
+            "commit": "${GITHUB_SHA}",
+            "ref": "${GITHUB_REF_NAME}",
+            "run": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          }
+          EOF
+          printf '%s\n' "${{ steps.meta.outputs.tags }}" > reports/image-tags.txt
+          cat reports/build-info.json
+
+      - name: Subir artefacto del build Docker
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: docker-build
+          path: |
+            reports/build-info.json
+            reports/image-tags.txt
+            reports/smoke-container.txt
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Despliegue en Render + verificación post-deploy
+  #   staging    ← push a la rama staging
+  #   production ← push a la rama main (requiere aprobación en el Environment)
+  #
+  # Configuración por GitHub Environment (Settings → Environments):
+  #   secrets.RENDER_DEPLOY_HOOK_URL  Deploy Hook del servicio en Render
+  #   vars.APP_URL                    URL pública del servicio (https://...)
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy (Render)
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
+    needs: [package, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      url: ${{ vars.APP_URL }}
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      APP_URL: ${{ vars.APP_URL }}
+    steps:
+      - name: Validar configuración del entorno
+        run: |
+          missing=0
+          [ -n "$DEPLOY_HOOK" ] || { echo "::error::Falta el secret RENDER_DEPLOY_HOOK_URL en el environment '$TARGET'"; missing=1; }
+          [ -n "$APP_URL" ]     || { echo "::error::Falta la variable APP_URL en el environment '$TARGET'"; missing=1; }
+          exit "$missing"
+
+      - name: Disparar deploy en Render
+        run: |
+          # Render construye el último commit de la rama que sigue el servicio.
+          # autoDeploy está desactivado: solo despliega el pipeline tras pasar CI.
+          curl -fsS -X POST "$DEPLOY_HOOK" -o /dev/null
+          echo "Deploy de ${GITHUB_SHA::7} solicitado a Render ($TARGET)."
+
+      - name: Esperar a que Render sirva este commit
+        run: |
+          # Render mantiene la versión anterior hasta que la nueva pasa su
+          # health check; se espera hasta que /api/version devuelva este SHA.
+          deadline=$(( $(date +%s) + 20 * 60 ))
+          while :; do
+            current=$(curl -s --max-time 90 "$APP_URL/api/version" \
+              | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
+            if [ "$current" = "$GITHUB_SHA" ]; then
+              echo "Render ya sirve ${GITHUB_SHA::7}."
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::Timeout: Render sigue sirviendo '${current:-sin respuesta}' en lugar de $GITHUB_SHA"
+              exit 1
+            fi
+            echo "Versión actual: '${current:-sin respuesta}'. Reintentando en 20s..."
+            sleep 20
+          done
+
+      - name: Verificación post-deploy (smoke test)
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          report="reports/smoke-${TARGET}.txt"
+          check() { # descripción, código(s) esperado(s) como regex, código obtenido
+            if [[ "$3" =~ ^($2)$ ]]; then echo "OK    $1 -> $3" | tee -a "$report"
+            else echo "FALLO $1 -> $3 (esperado $2)" | tee -a "$report"; return 1; fi
+          }
+          echo "== Verificación de $TARGET ($APP_URL) commit ${GITHUB_SHA}" | tee "$report"
+
+          check "GET /up" 200 \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/up")"
+
+          # Credenciales inválidas: 401/422 demuestra que la app y la BD responden
+          # (un fallo de BD devolvería 500).
+          check "POST /api/login (credenciales inválidas)" "401|422" \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "$APP_URL/api/login" \
+               -H 'Accept: application/json' -H 'Content-Type: application/json' \
+               -d '{"email":"smoke-test@invalid.local","password":"invalid"}')"
+
+          check "GET /api/ordenes sin token" 401 \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/api/ordenes" -H 'Accept: application/json')"
+
+          # Staging se siembra en cada deploy: se valida el flujo completo con login real.
+          if [ "$TARGET" = "staging" ]; then
+            token=$(curl -s --max-time 60 -X POST "$APP_URL/api/login" \
+              -H 'Accept: application/json' -H 'Content-Type: application/json' \
+              -d '{"email":"admin@restaurante.com","password":"12345678"}' \
+              | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            check "POST /api/login (admin sembrado)" 200 "$([ -n "$token" ] && echo 200 || echo 000)"
+            check "GET /api/ordenes con token" 200 \
+              "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/api/ordenes" \
+                 -H 'Accept: application/json' -H "Authorization: Bearer $token")"
+          fi
+
+      - name: Subir reporte de verificación
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: deploy-report-${{ env.TARGET }}
+          path: reports/
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Tag + GitHub Release v1.0.0 — SOLO si staging pasó la verificación.
+  # Idempotente: si el tag ya existe, no hace nada.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Release (tag + GitHub Release)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    needs: [deploy, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    env:
+      RELEASE_TAG: ${{ vars.RELEASE_TAG || 'v1.0.0' }}
+      IMAGE: ${{ needs.docker.outputs.image }}
+      DIGEST: ${{ needs.docker.outputs.digest }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ¿Ya existe el tag?
+        id: exists
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" > /dev/null; then
+            echo "::notice::El tag ${RELEASE_TAG} ya existe; no se crea un release nuevo."
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Descargar artefactos del pipeline
+        if: steps.exists.outputs.value == 'false'
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Preparar assets y notas del release
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          mkdir -p release-assets
+          cp artifacts/app-release/* release-assets/
+          cp artifacts/docker-build/build-info.json release-assets/
+          cp artifacts/deploy-report-staging/smoke-staging.txt release-assets/
+          (cd artifacts && zip -qr ../release-assets/coverage-report.zip coverage-report)
+          (cd artifacts && zip -qr ../release-assets/test-results.zip test-results-*)
+          ls -la release-assets
+
+          # Notas: la sección de esta versión en CHANGELOG.md.
+          awk -v v="${RELEASE_TAG#v}" '
+            index($0, "## [" v "]") == 1 {on=1; next}
+            on && /^## \[/ {exit}
+            on {print}
+          ' CHANGELOG.md > release-notes.md
+          {
+            echo
+            echo "---"
+            echo "**Imagen Docker:** \`${IMAGE}:${RELEASE_TAG}\` (\`${DIGEST}\`)"
+            echo
+            echo "Verificada en staging por el run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> release-notes.md
+          cat release-notes.md
+
+      - name: Etiquetar en GHCR la imagen verificada
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          docker buildx imagetools create -t "${IMAGE}:${RELEASE_TAG}" "${IMAGE}@${DIGEST}"
+
+      - name: Crear tag y GitHub Release
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          gh release create "${RELEASE_TAG}" release-assets/* \
+            --target "${GITHUB_SHA}" \
+            --title "El Pinguin API ${RELEASE_TAG}" \
+            --notes-file release-notes.md

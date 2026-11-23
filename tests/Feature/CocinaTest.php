@@ -2,14 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Orden;
-use App\Models\Mesa;
 use App\Models\Platillo;
-use App\Models\OrdenDetalle;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CocinaTest extends TestCase
 {
@@ -32,7 +29,7 @@ class CocinaTest extends TestCase
             ->assertJsonStructure([
                 'mensaje',
                 'token',
-                'usuario' => ['id', 'nombre', 'email', 'rol']
+                'usuario' => ['id', 'nombre', 'email', 'rol'],
             ])
             ->assertJsonPath('usuario.rol', 'Cocina');
     }
@@ -53,9 +50,9 @@ class CocinaTest extends TestCase
                     'total',
                     'mesa',
                     'detalles' => [
-                        '*' => ['id', 'platillo_id', 'cantidad', 'notas', 'platillo']
-                    ]
-                ]
+                        '*' => ['id', 'platillo_id', 'cantidad', 'notas', 'platillo'],
+                    ],
+                ],
             ]);
     }
 
@@ -67,7 +64,7 @@ class CocinaTest extends TestCase
         // Cambiar a preparando
         $response1 = $this->actingAs($userCocina, 'sanctum')
             ->patchJson("/api/ordenes/{$orden->id}/estado", [
-                'estado' => 'preparando'
+                'estado' => 'preparando',
             ]);
 
         $response1->assertStatus(200)
@@ -76,7 +73,7 @@ class CocinaTest extends TestCase
         // Cambiar a listo
         $response2 = $this->actingAs($userCocina, 'sanctum')
             ->patchJson("/api/ordenes/{$orden->id}/estado", [
-                'estado' => 'listo'
+                'estado' => 'listo',
             ]);
 
         $response2->assertStatus(200)
@@ -92,7 +89,7 @@ class CocinaTest extends TestCase
             ->postJson('/api/platillos', [
                 'nombre' => 'Nuevo Platillo',
                 'precio' => 100,
-                'categoria_id' => 1
+                'categoria_id' => 1,
             ]);
 
         $responsePlatillo->assertStatus(403);
@@ -102,7 +99,7 @@ class CocinaTest extends TestCase
             ->postJson('/api/pagos', [
                 'orden_id' => 1,
                 'metodo' => 'efectivo',
-                'monto' => 100
+                'monto' => 100,
             ]);
 
         $responsePago->assertStatus(403);

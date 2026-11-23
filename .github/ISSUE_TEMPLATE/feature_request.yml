@@ -1,0 +1,22 @@
+name: Nueva funcionalidad
+description: Proponer una mejora o funcionalidad
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: ¿Qué problema resuelve?
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+    validations:
+      required: true
+  - type: dropdown
+    id: rol
+    attributes:
+      label: Rol afectado
+      multiple: true
+      options: [Administrador, Mesero, Cocina]

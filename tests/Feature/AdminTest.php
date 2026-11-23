@@ -2,12 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Categoria;
-use App\Models\Platillo;
 use App\Models\Mesa;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class AdminTest extends TestCase
 {
@@ -38,7 +37,7 @@ class AdminTest extends TestCase
         $create = $this->actingAs($admin, 'sanctum')->postJson('/api/categorias', [
             'nombre' => 'Entradas',
             'descripcion' => 'Aperitivos y botanas',
-            'activo' => true
+            'activo' => true,
         ]);
         $create->assertStatus(201);
         $catId = $create->json('categoria.id');
@@ -47,7 +46,7 @@ class AdminTest extends TestCase
         $update = $this->actingAs($admin, 'sanctum')->putJson("/api/categorias/{$catId}", [
             'nombre' => 'Entradas Gourmet',
             'descripcion' => 'Aperitivos selectos',
-            'activo' => true
+            'activo' => true,
         ]);
         $update->assertStatus(200)
             ->assertJsonPath('categoria.nombre', 'Entradas Gourmet');
@@ -69,7 +68,7 @@ class AdminTest extends TestCase
             'descripcion' => 'Lechuga romana, crutones, parmesano',
             'precio' => 110.50,
             'imagen' => 'https://example.com/ensalada.jpg',
-            'disponible' => true
+            'disponible' => true,
         ]);
         $create->assertStatus(201);
         $platilloId = $create->json('platillo.id');
@@ -77,7 +76,7 @@ class AdminTest extends TestCase
         // 2. Editar
         $update = $this->actingAs($admin, 'sanctum')->putJson("/api/platillos/{$platilloId}", [
             'precio' => 125.00,
-            'disponible' => false
+            'disponible' => false,
         ]);
         $update->assertStatus(200)
             ->assertJsonPath('platillo.precio', 125);
@@ -94,14 +93,14 @@ class AdminTest extends TestCase
         // 1. Crear mesa
         $create = $this->actingAs($admin, 'sanctum')->postJson('/api/mesas', [
             'numero' => 99,
-            'estado' => 'disponible'
+            'estado' => 'disponible',
         ]);
         $create->assertStatus(201);
         $mesaId = $create->json('mesa.id');
 
         // 2. Actualizar estado
         $update = $this->actingAs($admin, 'sanctum')->putJson("/api/mesas/{$mesaId}", [
-            'estado' => 'reservada'
+            'estado' => 'reservada',
         ]);
         $update->assertStatus(200)
             ->assertJsonPath('mesa.estado', 'reservada');
