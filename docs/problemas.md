@@ -181,3 +181,7 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 ### P-33 · Permisos insuficientes para configurar el repositorio
 - **Problema:** la cuenta usada para la automatización tiene permiso **Write**, no **Admin**, sobre `Sosa1716/LaravelApp`. La protección de ramas, los Environments y sus secrets requieren Admin (la API responde 404).
 - **Solución:** esa configuración la aplica el propietario del repositorio siguiendo la sección *Entornos y configuración* del README. Todo lo demás (código, pipeline, PRs, merges) se automatizó.
+
+### P-34 · Acciones con runtime Node.js 20 (obsoleto)
+- **Problema:** la primera ejecución en GitHub (PR #1) pasó, pero con avisos: *"Node.js 20 is deprecated... actions/cache@v4, actions/upload-artifact@v4, docker/*"*. Cuando GitHub retire Node 20 esas acciones dejarán de funcionar. Además, los jobs `deploy`/`release` omitidos mostraban su nombre sin evaluar (`${{ ... }}`).
+- **Solución:** se actualizó cada acción a la **versión mayor más baja que ya usa Node 24**, revisando sus notas de release (solo cambian el runtime o eliminan entradas que este workflow no usa): `cache@v5`, `upload-artifact@v6`, `download-artifact@v7`, `setup-buildx-action@v4`, `build-push-action@v7`, `metadata-action@v6`, `login-action@v4`. Los jobs de deploy y release tienen ahora nombres fijos; el entorno se ve en el Environment del job.

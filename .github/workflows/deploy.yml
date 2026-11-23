@@ -61,7 +61,7 @@ jobs:
         run: composer validate --strict
 
       - name: Caché de Composer
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.composer/cache/files
           key: composer-${{ runner.os }}-8.2-${{ hashFiles('composer.lock') }}
@@ -113,7 +113,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Caché de Composer
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
@@ -162,7 +162,7 @@ jobs:
 
       - name: Subir resultados de pruebas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-results-${{ matrix.os }}-php${{ matrix.php }}-${{ matrix.db }}
           path: reports/junit.xml
@@ -171,7 +171,7 @@ jobs:
 
       - name: Subir reporte de cobertura
         if: matrix.coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: |
@@ -223,7 +223,7 @@ jobs:
           sha256sum dist/*.tar.gz | tee dist/SHA256SUMS.txt
 
       - name: Subir artefacto de la aplicación
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: app-release
           path: dist/
@@ -251,11 +251,11 @@ jobs:
         id: img
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Metadatos y tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.img.outputs.name }}
           tags: |
@@ -265,7 +265,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build (carga local para smoke test)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -315,7 +315,7 @@ jobs:
 
       - name: Login en GHCR
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -324,7 +324,7 @@ jobs:
       - name: Push a GHCR
         id: push
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -354,7 +354,7 @@ jobs:
 
       - name: Subir artefacto del build Docker
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: docker-build
           path: |
@@ -373,7 +373,7 @@ jobs:
   #   vars.APP_URL                    URL pública del servicio (https://...)
   # ---------------------------------------------------------------------------
   deploy:
-    name: Deploy a ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    name: Deploy (Render)
     if: >-
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
@@ -463,7 +463,7 @@ jobs:
 
       - name: Subir reporte de verificación
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deploy-report-${{ env.TARGET }}
           path: reports/
@@ -474,7 +474,7 @@ jobs:
   # Idempotente: si el tag ya existe, no hace nada.
   # ---------------------------------------------------------------------------
   release:
-    name: Release ${{ vars.RELEASE_TAG || 'v1.0.0' }}
+    name: Release (tag + GitHub Release)
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     needs: [deploy, docker]
     runs-on: ubuntu-latest
@@ -504,7 +504,7 @@ jobs:
 
       - name: Descargar artefactos del pipeline
         if: steps.exists.outputs.value == 'false'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 
