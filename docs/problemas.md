@@ -160,3 +160,11 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ### P-30 · PRs e issues sin estructura
 - **Solución:** plantilla de PR con checklist (Pint, pruebas, migraciones en SQLite **y** PostgreSQL, variables de entorno, bitácora, changelog), formularios de issue (bug y funcionalidad, con el entorno y la versión de `/api/version`) y `CODEOWNERS` para la revisión obligatoria de la infraestructura (`.github/`, `Dockerfile`, `docker/`, `render.yaml`).
+
+---
+
+## Fase 5 — Documentación
+
+### P-31 · README genérico de Laravel
+- **Problema:** el `README.md` era el del esqueleto de Laravel; no explicaba el proyecto, cómo correrlo, el flujo de ramas ni el pipeline.
+- **Solución:** README del proyecto con stack, estructura, puesta en marcha (Docker y PHP local), pruebas contra PostgreSQL, flujo de ramas, diagrama del pipeline (Mermaid), tabla de jobs y artefactos, configuración de Render y GitHub Environments, y referencia de la API. Se añadió `CHANGELOG.md` (fuente de las notas del release).
