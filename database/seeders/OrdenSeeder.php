@@ -2,24 +2,26 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\Mesa;
 use App\Models\Orden;
 use App\Models\OrdenDetalle;
+use App\Models\Pago;
 use App\Models\Platillo;
-use App\Models\Mesa;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class OrdenSeeder extends Seeder
 {
     public function run(): void
     {
-        $mesero = User::whereHas('role', fn($q) => $q->where('nombre', 'Mesero'))->first() 
+        $mesero = User::whereHas('role', fn ($q) => $q->where('nombre', 'Mesero'))->first()
             ?? User::first();
 
         $mesas = Mesa::take(5)->get();
         $platillos = Platillo::all();
 
-        if ($platillos->isEmpty() || $mesas->isEmpty() || !$mesero) {
+        if ($platillos->isEmpty() || $mesas->isEmpty() || ! $mesero) {
             return;
         }
 
@@ -30,7 +32,7 @@ class OrdenSeeder extends Seeder
                 'mesa_id' => $mesas[0]->id,
                 'user_id' => $mesero->id,
                 'estado' => 'pendiente',
-                'total' => 350.00
+                'total' => 350.00,
             ]
         );
         $orden1->detalles()->delete();
@@ -39,7 +41,7 @@ class OrdenSeeder extends Seeder
             'platillo_id' => $platillos[0]->id,
             'cantidad' => 2,
             'precio' => $platillos[0]->precio,
-            'notas' => 'Una sin cebolla, una término medio'
+            'notas' => 'Una sin cebolla, una término medio',
         ]);
         if (isset($platillos[3])) {
             OrdenDetalle::create([
@@ -47,7 +49,7 @@ class OrdenSeeder extends Seeder
                 'platillo_id' => $platillos[3]->id,
                 'cantidad' => 2,
                 'precio' => $platillos[3]->precio,
-                'notas' => 'Con poco hielo'
+                'notas' => 'Con poco hielo',
             ]);
         }
 
@@ -58,7 +60,7 @@ class OrdenSeeder extends Seeder
                 'mesa_id' => $mesas[1]->id,
                 'user_id' => $mesero->id,
                 'estado' => 'preparando',
-                'total' => 340.00
+                'total' => 340.00,
             ]
         );
         $orden2->detalles()->delete();
@@ -68,7 +70,7 @@ class OrdenSeeder extends Seeder
                 'platillo_id' => $platillos[1]->id,
                 'cantidad' => 1,
                 'precio' => $platillos[1]->precio,
-                'notas' => 'Tortillas bien doradas'
+                'notas' => 'Tortillas bien doradas',
             ]);
         }
         if (isset($platillos[2])) {
@@ -77,7 +79,7 @@ class OrdenSeeder extends Seeder
                 'platillo_id' => $platillos[2]->id,
                 'cantidad' => 1,
                 'precio' => $platillos[2]->precio,
-                'notas' => 'Masa delgada y bien cocida'
+                'notas' => 'Masa delgada y bien cocida',
             ]);
         }
 
@@ -88,7 +90,7 @@ class OrdenSeeder extends Seeder
                 'mesa_id' => $mesas[2]->id,
                 'user_id' => $mesero->id,
                 'estado' => 'listo',
-                'total' => 85.00
+                'total' => 85.00,
             ]
         );
         $orden3->detalles()->delete();
@@ -98,7 +100,7 @@ class OrdenSeeder extends Seeder
                 'platillo_id' => $platillos[4]->id,
                 'cantidad' => 1,
                 'precio' => $platillos[4]->precio,
-                'notas' => 'Extra salsa de chocolate'
+                'notas' => 'Extra salsa de chocolate',
             ]);
         }
 
@@ -109,7 +111,7 @@ class OrdenSeeder extends Seeder
                 'mesa_id' => $mesas[3]->id,
                 'user_id' => $mesero->id,
                 'estado' => 'entregado',
-                'total' => 485.00
+                'total' => 485.00,
             ]
         );
         $orden4->detalles()->delete();
@@ -118,7 +120,7 @@ class OrdenSeeder extends Seeder
             'platillo_id' => $platillos[0]->id,
             'cantidad' => 2,
             'precio' => $platillos[0]->precio,
-            'notas' => null
+            'notas' => null,
         ]);
         if (isset($platillos[2])) {
             OrdenDetalle::create([
@@ -126,16 +128,35 @@ class OrdenSeeder extends Seeder
                 'platillo_id' => $platillos[2]->id,
                 'cantidad' => 1,
                 'precio' => $platillos[2]->precio,
-                'notas' => null
+                'notas' => null,
             ]);
         }
-        \App\Models\Pago::updateOrCreate(
+        Pago::updateOrCreate(
             ['orden_id' => $orden4->id],
             [
                 'metodo' => 'tarjeta',
                 'monto' => 485.00,
-                'estado' => 'pagado'
+                'estado' => 'pagado',
             ]
+        );
+
+        $this->sincronizarSecuencia('ordenes');
+    }
+
+    /**
+     * Las órdenes se insertan con IDs explícitos (1-4). En PostgreSQL eso no
+     * avanza la secuencia del autoincremental, y la siguiente orden creada desde
+     * la API intentaría usar id=1 (error 23505 "duplicate key"). Se ajusta la
+     * secuencia al MAX(id) actual. SQLite/MySQL no lo necesitan.
+     */
+    private function sincronizarSecuencia(string $tabla): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::statement(
+            "SELECT setval(pg_get_serial_sequence('{$tabla}', 'id'), COALESCE((SELECT MAX(id) FROM {$tabla}), 1))"
         );
     }
 }
