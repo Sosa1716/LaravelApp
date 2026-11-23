@@ -70,7 +70,7 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ### P-14 · Los *service containers* de GitHub Actions solo existen en Linux
 - **Problema:** `services: postgres` no funciona en runners Windows ni macOS, pero la matriz exige PostgreSQL en los tres.
-- **Solución:** se usa la acción `ikalnytskyi/action-setup-postgres@v6`, que instala/arranca PostgreSQL nativo en los tres sistemas operativos con el mismo usuario, contraseña y BD.
+- **Solución:** se usa la acción `ikalnytskyi/action-setup-postgres` (v9, ver P-35), que instala/arranca PostgreSQL nativo en los tres sistemas operativos con el mismo usuario, contraseña y BD.
 
 ### P-15 · Diferencias de shell entre sistemas operativos
 - **Problema:** en Windows el shell por defecto de los `run:` es PowerShell; `cp`, `mkdir -p` o `$GITHUB_ENV` con `>>` se comportan distinto.
@@ -185,3 +185,9 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 ### P-34 · Acciones con runtime Node.js 20 (obsoleto)
 - **Problema:** la primera ejecución en GitHub (PR #1) pasó, pero con avisos: *"Node.js 20 is deprecated... actions/cache@v4, actions/upload-artifact@v4, docker/*"*. Cuando GitHub retire Node 20 esas acciones dejarán de funcionar. Además, los jobs `deploy`/`release` omitidos mostraban su nombre sin evaluar (`${{ ... }}`).
 - **Solución:** se actualizó cada acción a la **versión mayor más baja que ya usa Node 24**, revisando sus notas de release (solo cambian el runtime o eliminan entradas que este workflow no usa): `cache@v5`, `upload-artifact@v6`, `download-artifact@v7`, `setup-buildx-action@v4`, `build-push-action@v7`, `metadata-action@v6`, `login-action@v4`. Los jobs de deploy y release tienen ahora nombres fijos; el entorno se ve en el Environment del job.
+
+### P-35 · PostgreSQL no arrancaba en los runners macOS
+- **Problema:** en la primera ejecución de la matriz completa (push a `develop`) pasaron los 4 jobs de Windows y los 4 de Ubuntu, pero `macos-latest` + `pgsql` falló en "Levantar PostgreSQL" con *exit code 127* (comando no encontrado).
+- **Causa:** `ikalnytskyi/action-setup-postgres@v6` solo instala PostgreSQL con Homebrew en macOS 13/14; la imagen actual de `macos-latest` es más nueva y ya no trae PostgreSQL preinstalado, así que `initdb` no existía.
+- **Solución:** actualizar a `@v9`, que instala PostgreSQL con Homebrew en cualquier versión de macOS, y fijar `postgres-version: "16"` para usar en CI la misma versión mayor que `docker-compose.yml`. Los parámetros `username/password/database/port` no cambiaron.
+- **Lección:** `macos-latest` cambia de versión sin aviso; por eso la matriz completa corre en cada push a las ramas de integración.
