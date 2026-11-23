@@ -1,0 +1,222 @@
+# =============================================================================
+#  Pipeline único de CI/CD — El Pinguin API (Laravel 12)
+#
+#  Flujo de ramas:  feature/* ──PR──▶ develop ──PR──▶ staging ──PR──▶ main
+#
+#  ┌────────┐   ┌──────────────────────┐   ┌────────┐
+#  │  lint  │   │ tests (matriz 3×2×2) │   │ package│
+#  └───┬────┘   └──────────┬───────────┘   └───┬────┘
+#      └──────────┬────────┘                   │
+#              ci-ok ──────────────────────────┘
+# =============================================================================
+name: CI/CD
+
+on:
+  push:
+    branches: [develop, staging, main]
+  pull_request:
+    branches: [develop, staging, main]
+  workflow_dispatch:
+
+# Un solo pipeline activo por rama/PR. En PRs se cancela el anterior; en pushes
+# a ramas de despliegue NO, para no cortar un deploy a la mitad.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PHP_EXTENSIONS: mbstring, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, zip, intl, fileinfo, bcmath
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Calidad de código y seguridad de dependencias
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint y auditoría
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validar composer.json / composer.lock
+        run: composer validate --strict
+
+      - name: Caché de Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-8.2-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-8.2-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Estilo de código (Laravel Pint)
+        run: vendor/bin/pint --test
+
+      - name: Auditoría de seguridad (composer audit)
+        run: composer audit --no-interaction
+
+  # ---------------------------------------------------------------------------
+  # Pruebas: matriz multiplataforma  SO × PHP × motor de BD  (12 combinaciones)
+  # ---------------------------------------------------------------------------
+  tests:
+    name: Tests (${{ matrix.os }}, PHP ${{ matrix.php }}, ${{ matrix.db }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        php: ['8.2', '8.3']
+        db: [sqlite, pgsql]
+        include:
+          # La cobertura se mide en una sola combinación (la más rápida).
+          - os: ubuntu-latest
+            php: '8.3'
+            db: sqlite
+            coverage: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
+          tools: composer:v2
+
+      - name: Ruta de caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Caché de Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-${{ matrix.php }}-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Preparar entorno (.env + APP_KEY)
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      # PostgreSQL en los 3 sistemas operativos (los service containers de
+      # GitHub solo funcionan en Linux, por eso se usa esta acción).
+      - name: Levantar PostgreSQL
+        if: matrix.db == 'pgsql'
+        uses: ikalnytskyi/action-setup-postgres@v6
+        with:
+          username: laravel
+          password: secret
+          database: testing
+          port: 5432
+
+      - name: Configurar conexión PostgreSQL
+        if: matrix.db == 'pgsql'
+        run: |
+          {
+            echo "DB_CONNECTION=pgsql"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_PORT=5432"
+            echo "DB_DATABASE=testing"
+            echo "DB_USERNAME=laravel"
+            echo "DB_PASSWORD=secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Ejecutar pruebas
+        run: |
+          mkdir -p reports
+          if [ "${{ matrix.coverage }}" = "true" ]; then
+            php vendor/bin/phpunit --log-junit reports/junit.xml \
+              --coverage-text --coverage-clover reports/clover.xml --coverage-html reports/coverage-html
+          else
+            php vendor/bin/phpunit --log-junit reports/junit.xml
+          fi
+
+      - name: Subir resultados de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-php${{ matrix.php }}-${{ matrix.db }}
+          path: reports/junit.xml
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Subir reporte de cobertura
+        if: matrix.coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            reports/clover.xml
+            reports/coverage-html
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Puerta única de CI: es el check que exige la protección de ramas.
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [lint, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar resultado de lint y tests
+        run: |
+          echo "lint=${{ needs.lint.result }}  tests=${{ needs.tests.result }}"
+          [ "${{ needs.lint.result }}" = "success" ] && [ "${{ needs.tests.result }}" = "success" ]
+
+  # ---------------------------------------------------------------------------
+  # Paquete de la aplicación (código + vendor de producción) como artefacto.
+  # ---------------------------------------------------------------------------
+  package:
+    name: Empaquetar aplicación
+    needs: ci-ok
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Instalar dependencias de producción
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-progress --no-interaction
+
+      - name: Crear tarball
+        run: |
+          mkdir -p dist
+          tar --exclude=.git --exclude=.github --exclude=tests --exclude=node_modules \
+              --exclude=dist --exclude=.env --exclude='storage/logs/*' \
+              -czf "dist/el-pinguin-api-${GITHUB_SHA::7}.tar.gz" .
+          sha256sum dist/*.tar.gz | tee dist/SHA256SUMS.txt
+
+      - name: Subir artefacto de la aplicación
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: dist/
+          retention-days: 30

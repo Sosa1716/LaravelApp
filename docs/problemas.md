@@ -61,11 +61,36 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ---
 
+## Fase 1 — Integración continua (`.github/workflows/deploy.yml`)
+
+### P-08 · Las pruebas solo corrían en SQLite (producción usa PostgreSQL)
+- **Problema:** `phpunit.xml` fuerza SQLite en memoria; nunca se probaba contra PostgreSQL.
+- **Impacto:** bugs específicos del motor llegaban a producción (ver P-12).
+- **Solución:** matriz de CI **SO × PHP × BD** = `ubuntu/windows/macos` × `8.2/8.3` × `sqlite/pgsql` (12 jobs, `fail-fast: false`). Las variables `DB_*` del job tienen prioridad sobre `phpunit.xml` porque `<env>` de PHPUnit no sobrescribe variables ya definidas.
+
+### P-14 · Los *service containers* de GitHub Actions solo existen en Linux
+- **Problema:** `services: postgres` no funciona en runners Windows ni macOS, pero la matriz exige PostgreSQL en los tres.
+- **Solución:** se usa la acción `ikalnytskyi/action-setup-postgres@v6`, que instala/arranca PostgreSQL nativo en los tres sistemas operativos con el mismo usuario, contraseña y BD.
+
+### P-15 · Diferencias de shell entre sistemas operativos
+- **Problema:** en Windows el shell por defecto de los `run:` es PowerShell; `cp`, `mkdir -p` o `$GITHUB_ENV` con `>>` se comportan distinto.
+- **Solución:** `defaults.run.shell: bash` en todo el workflow (Git Bash en Windows). Las pruebas se lanzan con `php vendor/bin/phpunit` en lugar de `vendor/bin/phpunit` para no depender del ejecutable `.bat`.
+
+### P-16 · Demasiados checks para proteger ramas
+- **Problema:** exigir 12 jobs de matriz + lint como *required checks* es frágil (cualquier cambio de nombre en la matriz rompe la protección).
+- **Solución:** job agregador **`CI OK`** (`needs: [lint, tests]`, `if: always()`) que falla si cualquiera falla. Es el único check requerido.
+
+### P-17 · No había pruebas de los endpoints de verificación ni pruebas unitarias reales
+- **Solución:** `tests/Feature/HealthTest.php` (`/up`, `/api/version`, login inválido sin 500) y `tests/Unit/RoleMiddlewareTest.php` (401/403/paso permitido). Se añadió `GET /api/version`, que devuelve el commit desplegado (`RENDER_GIT_COMMIT` o `APP_VERSION`) y que el pipeline usa para verificar despliegues.
+
+**Artefactos que sube el pipeline (`actions/upload-artifact`):** `test-results-<so>-php<v>-<bd>` (JUnit de cada combinación), `coverage-report` (Clover + HTML) y `app-release` (tarball con `vendor` de producción + `SHA256SUMS.txt`).
+
+---
+
 ## Pendientes detectados (se resuelven en fases posteriores)
 
 | ID | Problema | Fase |
 |----|----------|------|
 | P-06 | `Dockerfile` ejecuta `db:seed --force` en **cada arranque** (duplica datos / crea usuarios con contraseña `12345678` en producción). | 2 |
 | P-07 | Se usa `php artisan serve` (servidor de desarrollo) y `chmod 777` en la imagen. | 2 |
-| P-08 | Las pruebas solo corren en SQLite, producción usa PostgreSQL. | 1 |
 | P-09 | No existe entorno de staging en Render. | 3 |
