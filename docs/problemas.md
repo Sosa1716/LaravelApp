@@ -61,11 +61,123 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ---
 
-## Pendientes detectados (se resuelven en fases posteriores)
+## Fase 1 — Integración continua (`.github/workflows/deploy.yml`)
 
-| ID | Problema | Fase |
-|----|----------|------|
-| P-06 | `Dockerfile` ejecuta `db:seed --force` en **cada arranque** (duplica datos / crea usuarios con contraseña `12345678` en producción). | 2 |
-| P-07 | Se usa `php artisan serve` (servidor de desarrollo) y `chmod 777` en la imagen. | 2 |
-| P-08 | Las pruebas solo corren en SQLite, producción usa PostgreSQL. | 1 |
-| P-09 | No existe entorno de staging en Render. | 3 |
+### P-08 · Las pruebas solo corrían en SQLite (producción usa PostgreSQL)
+- **Problema:** `phpunit.xml` fuerza SQLite en memoria; nunca se probaba contra PostgreSQL.
+- **Impacto:** bugs específicos del motor llegaban a producción (ver P-12).
+- **Solución:** matriz de CI **SO × PHP × BD** = `ubuntu/windows/macos` × `8.2/8.3` × `sqlite/pgsql` (12 jobs, `fail-fast: false`). Las variables `DB_*` del job tienen prioridad sobre `phpunit.xml` porque `<env>` de PHPUnit no sobrescribe variables ya definidas.
+
+### P-14 · Los *service containers* de GitHub Actions solo existen en Linux
+- **Problema:** `services: postgres` no funciona en runners Windows ni macOS, pero la matriz exige PostgreSQL en los tres.
+- **Solución:** se usa la acción `ikalnytskyi/action-setup-postgres@v6`, que instala/arranca PostgreSQL nativo en los tres sistemas operativos con el mismo usuario, contraseña y BD.
+
+### P-15 · Diferencias de shell entre sistemas operativos
+- **Problema:** en Windows el shell por defecto de los `run:` es PowerShell; `cp`, `mkdir -p` o `$GITHUB_ENV` con `>>` se comportan distinto.
+- **Solución:** `defaults.run.shell: bash` en todo el workflow (Git Bash en Windows). Las pruebas se lanzan con `php vendor/bin/phpunit` en lugar de `vendor/bin/phpunit` para no depender del ejecutable `.bat`.
+
+### P-16 · Demasiados checks para proteger ramas
+- **Problema:** exigir 12 jobs de matriz + lint como *required checks* es frágil (cualquier cambio de nombre en la matriz rompe la protección).
+- **Solución:** job agregador **`CI OK`** (`needs: [lint, tests]`, `if: always()`) que falla si cualquiera falla. Es el único check requerido.
+
+### P-17 · No había pruebas de los endpoints de verificación ni pruebas unitarias reales
+- **Solución:** `tests/Feature/HealthTest.php` (`/up`, `/api/version`, login inválido sin 500) y `tests/Unit/RoleMiddlewareTest.php` (401/403/paso permitido). Se añadió `GET /api/version`, que devuelve el commit desplegado (`RENDER_GIT_COMMIT` o `APP_VERSION`) y que el pipeline usa para verificar despliegues.
+
+**Artefactos que sube el pipeline (`actions/upload-artifact`):** `test-results-<so>-php<v>-<bd>` (JUnit de cada combinación), `coverage-report` (Clover + HTML) y `app-release` (tarball con `vendor` de producción + `SHA256SUMS.txt`).
+
+---
+
+## Fase 2 — Docker con FrankenPHP
+
+### P-06 · El contenedor ejecutaba `db:seed --force` en cada arranque
+- **Problema:** el `CMD` original corría los seeders cada vez que Render reiniciaba el contenedor (en el plan free, tras cada periodo de inactividad).
+- **Impacto:** `OrdenSeeder` **sobrescribe las órdenes 1-4 reales** y sus detalles; `UserSeeder` restablece los usuarios con contraseña `12345678` en producción.
+- **Solución:** `docker/entrypoint.sh` solo siembra si `SEED_ON_DEPLOY=true`. Producción usa `false`; staging (BD efímera) usa `true`.
+
+### P-07 · Servidor de desarrollo y permisos 777 en producción
+- **Problema:** se usaba `php artisan serve` (servidor embebido de PHP, un solo proceso, no apto para producción) y `chmod -R 777` como root.
+- **Solución:** imagen `dunglas/frankenphp:1-php8.3-bookworm` (Caddy + PHP 8.3) con `frankenphp php-server`, `php.ini-production` + OPcache sin validación de timestamps, y **usuario `app` (uid 10001) sin privilegios** que solo puede escribir en `storage`, `bootstrap/cache` y `database`.
+- **Verificación:** `docker exec ... id` → `uid=10001(app)`; `HEALTHCHECK` contra `/up` → `healthy`.
+
+### P-18 · `view:cache` fallaba en el build anterior
+- **Problema (histórico, commit `b1fe849`):** `.dockerignore` excluye `storage/framework/*`, así que en la imagen no existían `storage/framework/views` ni `cache`, y `view:cache` fallaba.
+- **Solución:** el `Dockerfile` crea los directorios de runtime y las cachés (`config`, `route`, `view`, `event`) se generan en el **entrypoint**, no en el build, para que lean las variables reales del entorno (Render las inyecta al arrancar).
+
+### P-19 · Imagen de una sola etapa con Composer y herramientas de build
+- **Solución:** build **multi-stage**: la etapa `vendor` (`composer:2`) instala dependencias sin dev; la etapa final solo copia `vendor/`, genera el autoloader optimizado (`--classmap-authoritative`) y **elimina el binario de Composer**.
+
+### P-20 · El puerto lo decide la plataforma en tiempo de ejecución
+- **Problema:** Render inyecta `PORT` al arrancar; un `CMD` en forma exec no expande variables.
+- **Solución:** el entrypoint hace `exec frankenphp php-server --listen ":${PORT}"` (por defecto 8080). El smoke test del CI arranca la imagen con `PORT=10000` para simular Render.
+
+### P-21 · Riesgo de copiar una base SQLite local a la imagen
+- **Solución:** `database/*.sqlite*` y `docker-compose.yml` añadidos a `.dockerignore`.
+
+### P-22 · Contenedor arrancaba sin `APP_KEY` y fallaba en la primera petición
+- **Solución:** el entrypoint valida `APP_KEY` y termina con un mensaje claro si falta. Las migraciones se reintentan hasta 10 veces (la BD gestionada puede tardar en aceptar conexiones).
+
+**Verificación local realizada:** `docker compose up` (FrankenPHP + PostgreSQL 16) → reinicio del contenedor con re-seed → `POST /api/ordenes` = **201** (P-12 corregido también en la imagen) y sin duplicar detalles.
+
+**En el pipeline:** job `docker` → build con caché de GitHub Actions, smoke test del contenedor (`/up`, `/api/version` = SHA del commit, login 200, usuario no-root), push a **GHCR** (`sha-<commit>`, `<rama>`, `latest` en `main`) con SBOM y provenance, y artefacto `docker-build` (`build-info.json`, tags, reporte del smoke test).
+
+---
+
+## Fase 3 — Despliegue continuo (Render) y release
+
+### P-09 · No existía entorno de staging
+- **Solución:** segundo servicio `el-pinguin-api-staging` en `render.yaml`, que sigue la rama `staging`, con el mismo `Dockerfile` que producción.
+
+### P-23 · El plan free de Render permite una sola base PostgreSQL
+- **Problema:** crear `el-pinguin-db-staging` falla en el plan gratuito (límite de una BD PostgreSQL free por cuenta).
+- **Solución:** staging usa **SQLite dentro del contenedor**, recreado y sembrado (`SEED_ON_DEPLOY=true`) en cada deploy. Ventaja: datos conocidos para la verificación automática (login real con el admin sembrado). La compatibilidad con PostgreSQL la cubre la matriz de CI (P-08) y producción sigue en PostgreSQL. Si en el futuro se usa un plan de pago, basta con cambiar las `envVars` de staging a una BD propia.
+
+### P-24 · Render desplegaba en cada push aunque las pruebas fallaran
+- **Problema:** con auto-deploy, Render construye cualquier commit de la rama, sin esperar al CI.
+- **Solución:** `autoDeploy: false` en ambos servicios. El job `deploy` llama al **Deploy Hook** de Render solo después de `ci-ok`, `package` y `docker`. Además, `healthCheckPath: /up`, así Render no cambia el tráfico a una versión que no arranca.
+
+### P-25 · El Deploy Hook es asíncrono: "200 OK" no significa "desplegado"
+- **Problema:** el hook solo encola el deploy; el pipeline no sabría si la nueva versión quedó en línea ni cuándo.
+- **Solución:** el job consulta `GET /api/version` cada 20 s (máximo 20 min, para cubrir el build y el arranque en frío del plan free) hasta que devuelva **el SHA exacto del commit** (`RENDER_GIT_COMMIT`). Después corre un smoke test: `/up` 200, login inválido 401/422 (demuestra que la BD responde), rutas protegidas 401 sin token y, en staging, login real + `GET /api/ordenes` 200. El reporte se sube como artefacto `deploy-report-<entorno>`.
+
+### P-26 · Release solo después de verificar staging
+- **Requisito:** el tag `v1.0.0` y el GitHub Release se crean **solo si staging pasa la verificación**.
+- **Solución:** job `release` con `needs: [deploy, docker]` que solo corre en pushes a `staging`. Es **idempotente**: si el tag ya existe, no hace nada (los siguientes pushes a staging no fallan). Adjunta al release el tarball de la app + `SHA256SUMS.txt`, `build-info.json`, el reporte de verificación de staging, cobertura y resultados de pruebas, y etiqueta en GHCR **la misma imagen (mismo digest)** verificada como `:v1.0.0`. Las notas salen de la sección `## [1.0.0]` de `CHANGELOG.md`. La versión se puede cambiar con la variable de repositorio `RELEASE_TAG`.
+
+### P-27 · Secretos de despliegue por entorno
+- **Solución:** GitHub **Environments** `staging` y `production`, cada uno con su secret `RENDER_DEPLOY_HOOK_URL` y su variable `APP_URL`. `production` exige **aprobación manual** (required reviewers). Si falta configuración, el job falla con un mensaje explícito en lugar de "pasar" en silencio.
+
+---
+
+## Fase 4 — Gobernanza del repositorio
+
+### P-28 · Cualquiera podía hacer push directo a `main`/`staging`
+- **Problema:** sin reglas de protección, un push directo salta el CI y (con el CD) desplegaría sin revisión.
+- **Solución:** protección de ramas `main`, `staging` y `develop`: PR obligatorio, check requerido **`CI OK`** (ver P-16), rama actualizada antes de fusionar, sin force-push ni borrado. En `main` y `staging` además se exige 1 aprobación y que las conversaciones estén resueltas.
+
+### P-29 · Dependencias sin mantenimiento automático
+- **Problema:** las vulnerabilidades de P-11 se acumularon porque nadie actualizaba dependencias.
+- **Solución:** `.github/dependabot.yml` semanal para **composer**, **npm**, **github-actions** y **docker** (imagen base de FrankenPHP). Los PRs apuntan a `develop` y se agrupan (laravel/*, symfony/*, dev) para no saturar el repo.
+
+### P-30 · PRs e issues sin estructura
+- **Solución:** plantilla de PR con checklist (Pint, pruebas, migraciones en SQLite **y** PostgreSQL, variables de entorno, bitácora, changelog), formularios de issue (bug y funcionalidad, con el entorno y la versión de `/api/version`) y `CODEOWNERS` para la revisión obligatoria de la infraestructura (`.github/`, `Dockerfile`, `docker/`, `render.yaml`).
+
+---
+
+## Fase 5 — Documentación
+
+### P-31 · README genérico de Laravel
+- **Problema:** el `README.md` era el del esqueleto de Laravel; no explicaba el proyecto, cómo correrlo, el flujo de ramas ni el pipeline.
+- **Solución:** README del proyecto con stack, estructura, puesta en marcha (Docker y PHP local), pruebas contra PostgreSQL, flujo de ramas, diagrama del pipeline (Mermaid), tabla de jobs y artefactos, configuración de Render y GitHub Environments, y referencia de la API. Se añadió `CHANGELOG.md` (fuente de las notas del release).
+
+---
+
+## Puesta en marcha en GitHub
+
+### P-32 · Coste de minutos de la matriz multiplataforma en un repo privado
+- **Problema:** el repositorio es privado. En el plan gratuito de GitHub hay 2 000 minutos/mes y los runners **Windows cuentan ×2** y **macOS ×10**. La matriz completa (12 jobs) consume ≈ 270 minutos facturables por ejecución; correrla en cada PR y en cada push agotaría la cuota en pocos días.
+- **Solución:** matriz dinámica con `fromJSON`: en **pull requests** solo `ubuntu-latest` (4 jobs: PHP 8.2/8.3 × SQLite/PostgreSQL); en **pushes a `develop`, `staging` y `main`** y en ejecución manual (`workflow_dispatch`) la matriz completa Ubuntu/Windows/macOS. Así cada cambio que entra a una rama de integración o despliegue se valida en los tres SO, y los PRs dan feedback rápido y barato.
+- **Además:** las fases se integraron con PRs apilados (cada fase con su PR) para ejecutar el CI completo una sola vez al llegar a `develop`.
+
+### P-33 · Permisos insuficientes para configurar el repositorio
+- **Problema:** la cuenta usada para la automatización tiene permiso **Write**, no **Admin**, sobre `Sosa1716/LaravelApp`. La protección de ramas, los Environments y sus secrets requieren Admin (la API responde 404).
+- **Solución:** esa configuración la aplica el propietario del repositorio siguiendo la sección *Entornos y configuración* del README. Todo lo demás (código, pipeline, PRs, merges) se automatizó.
