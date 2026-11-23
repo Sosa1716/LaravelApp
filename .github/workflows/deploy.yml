@@ -3,11 +3,16 @@
 #
 #  Flujo de ramas:  feature/* ──PR──▶ develop ──PR──▶ staging ──PR──▶ main
 #
-#  ┌────────┐   ┌──────────────────────┐   ┌────────┐
-#  │  lint  │   │ tests (matriz 3×2×2) │   │ package│
-#  └───┬────┘   └──────────┬───────────┘   └───┬────┘
-#      └──────────┬────────┘                   │
-#              ci-ok ──────────────────────────┘
+#   lint ─┐
+#         ├─▶ ci-ok ─┬─▶ package ──────┐
+#   tests ┘ (3×2×2)  └─▶ docker (GHCR) ┴─▶ deploy ──▶ release v1.0.0
+#                                           │          (solo staging y solo si
+#                          staging ◀────────┤           la verificación pasa)
+#                          production ◀─────┘ (aprobación manual)
+#
+#  PRs y develop: CI + build/smoke de la imagen (sin publicar ni desplegar).
+#  Push a staging: publica imagen, despliega en Render staging, verifica, release.
+#  Push a main:    publica imagen (latest) y despliega a producción tras aprobación.
 # =============================================================================
 name: CI/CD
 
@@ -81,7 +86,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Matriz completa (3 SO) en pushes a develop/staging/main y en ejecución
+        # manual. En PRs solo Ubuntu: en repos privados Windows cuesta 2× y
+        # macOS 10× minutos de Actions (ver docs/problemas.md, P-32).
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest","macos-latest"]') }}
         php: ['8.2', '8.3']
         db: [sqlite, pgsql]
         include:
@@ -354,3 +362,188 @@ jobs:
             reports/image-tags.txt
             reports/smoke-container.txt
           retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Despliegue en Render + verificación post-deploy
+  #   staging    ← push a la rama staging
+  #   production ← push a la rama main (requiere aprobación en el Environment)
+  #
+  # Configuración por GitHub Environment (Settings → Environments):
+  #   secrets.RENDER_DEPLOY_HOOK_URL  Deploy Hook del servicio en Render
+  #   vars.APP_URL                    URL pública del servicio (https://...)
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy a ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
+    needs: [package, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      url: ${{ vars.APP_URL }}
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      APP_URL: ${{ vars.APP_URL }}
+    steps:
+      - name: Validar configuración del entorno
+        run: |
+          missing=0
+          [ -n "$DEPLOY_HOOK" ] || { echo "::error::Falta el secret RENDER_DEPLOY_HOOK_URL en el environment '$TARGET'"; missing=1; }
+          [ -n "$APP_URL" ]     || { echo "::error::Falta la variable APP_URL en el environment '$TARGET'"; missing=1; }
+          exit "$missing"
+
+      - name: Disparar deploy en Render
+        run: |
+          # Render construye el último commit de la rama que sigue el servicio.
+          # autoDeploy está desactivado: solo despliega el pipeline tras pasar CI.
+          curl -fsS -X POST "$DEPLOY_HOOK" -o /dev/null
+          echo "Deploy de ${GITHUB_SHA::7} solicitado a Render ($TARGET)."
+
+      - name: Esperar a que Render sirva este commit
+        run: |
+          # Render mantiene la versión anterior hasta que la nueva pasa su
+          # health check; se espera hasta que /api/version devuelva este SHA.
+          deadline=$(( $(date +%s) + 20 * 60 ))
+          while :; do
+            current=$(curl -s --max-time 90 "$APP_URL/api/version" \
+              | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
+            if [ "$current" = "$GITHUB_SHA" ]; then
+              echo "Render ya sirve ${GITHUB_SHA::7}."
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::Timeout: Render sigue sirviendo '${current:-sin respuesta}' en lugar de $GITHUB_SHA"
+              exit 1
+            fi
+            echo "Versión actual: '${current:-sin respuesta}'. Reintentando en 20s..."
+            sleep 20
+          done
+
+      - name: Verificación post-deploy (smoke test)
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          report="reports/smoke-${TARGET}.txt"
+          check() { # descripción, código(s) esperado(s) como regex, código obtenido
+            if [[ "$3" =~ ^($2)$ ]]; then echo "OK    $1 -> $3" | tee -a "$report"
+            else echo "FALLO $1 -> $3 (esperado $2)" | tee -a "$report"; return 1; fi
+          }
+          echo "== Verificación de $TARGET ($APP_URL) commit ${GITHUB_SHA}" | tee "$report"
+
+          check "GET /up" 200 \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/up")"
+
+          # Credenciales inválidas: 401/422 demuestra que la app y la BD responden
+          # (un fallo de BD devolvería 500).
+          check "POST /api/login (credenciales inválidas)" "401|422" \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "$APP_URL/api/login" \
+               -H 'Accept: application/json' -H 'Content-Type: application/json' \
+               -d '{"email":"smoke-test@invalid.local","password":"invalid"}')"
+
+          check "GET /api/ordenes sin token" 401 \
+            "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/api/ordenes" -H 'Accept: application/json')"
+
+          # Staging se siembra en cada deploy: se valida el flujo completo con login real.
+          if [ "$TARGET" = "staging" ]; then
+            token=$(curl -s --max-time 60 -X POST "$APP_URL/api/login" \
+              -H 'Accept: application/json' -H 'Content-Type: application/json' \
+              -d '{"email":"admin@restaurante.com","password":"12345678"}' \
+              | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            check "POST /api/login (admin sembrado)" 200 "$([ -n "$token" ] && echo 200 || echo 000)"
+            check "GET /api/ordenes con token" 200 \
+              "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$APP_URL/api/ordenes" \
+                 -H 'Accept: application/json' -H "Authorization: Bearer $token")"
+          fi
+
+      - name: Subir reporte de verificación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-report-${{ env.TARGET }}
+          path: reports/
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Tag + GitHub Release v1.0.0 — SOLO si staging pasó la verificación.
+  # Idempotente: si el tag ya existe, no hace nada.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Release ${{ vars.RELEASE_TAG || 'v1.0.0' }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    needs: [deploy, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    env:
+      RELEASE_TAG: ${{ vars.RELEASE_TAG || 'v1.0.0' }}
+      IMAGE: ${{ needs.docker.outputs.image }}
+      DIGEST: ${{ needs.docker.outputs.digest }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: ¿Ya existe el tag?
+        id: exists
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" > /dev/null; then
+            echo "::notice::El tag ${RELEASE_TAG} ya existe; no se crea un release nuevo."
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Descargar artefactos del pipeline
+        if: steps.exists.outputs.value == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Preparar assets y notas del release
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          mkdir -p release-assets
+          cp artifacts/app-release/* release-assets/
+          cp artifacts/docker-build/build-info.json release-assets/
+          cp artifacts/deploy-report-staging/smoke-staging.txt release-assets/
+          (cd artifacts && zip -qr ../release-assets/coverage-report.zip coverage-report)
+          (cd artifacts && zip -qr ../release-assets/test-results.zip test-results-*)
+          ls -la release-assets
+
+          # Notas: la sección de esta versión en CHANGELOG.md.
+          awk -v v="${RELEASE_TAG#v}" '
+            index($0, "## [" v "]") == 1 {on=1; next}
+            on && /^## \[/ {exit}
+            on {print}
+          ' CHANGELOG.md > release-notes.md
+          {
+            echo
+            echo "---"
+            echo "**Imagen Docker:** \`${IMAGE}:${RELEASE_TAG}\` (\`${DIGEST}\`)"
+            echo
+            echo "Verificada en staging por el run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> release-notes.md
+          cat release-notes.md
+
+      - name: Etiquetar en GHCR la imagen verificada
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          docker buildx imagetools create -t "${IMAGE}:${RELEASE_TAG}" "${IMAGE}@${DIGEST}"
+
+      - name: Crear tag y GitHub Release
+        if: steps.exists.outputs.value == 'false'
+        run: |
+          gh release create "${RELEASE_TAG}" release-assets/* \
+            --target "${GITHUB_SHA}" \
+            --title "El Pinguin API ${RELEASE_TAG}" \
+            --notes-file release-notes.md

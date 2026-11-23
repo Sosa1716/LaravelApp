@@ -122,8 +122,62 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ---
 
-## Pendientes detectados (se resuelven en fases posteriores)
+## Fase 3 — Despliegue continuo (Render) y release
 
-| ID | Problema | Fase |
-|----|----------|------|
-| P-09 | No existe entorno de staging en Render. | 3 |
+### P-09 · No existía entorno de staging
+- **Solución:** segundo servicio `el-pinguin-api-staging` en `render.yaml`, que sigue la rama `staging`, con el mismo `Dockerfile` que producción.
+
+### P-23 · El plan free de Render permite una sola base PostgreSQL
+- **Problema:** crear `el-pinguin-db-staging` falla en el plan gratuito (límite de una BD PostgreSQL free por cuenta).
+- **Solución:** staging usa **SQLite dentro del contenedor**, recreado y sembrado (`SEED_ON_DEPLOY=true`) en cada deploy. Ventaja: datos conocidos para la verificación automática (login real con el admin sembrado). La compatibilidad con PostgreSQL la cubre la matriz de CI (P-08) y producción sigue en PostgreSQL. Si en el futuro se usa un plan de pago, basta con cambiar las `envVars` de staging a una BD propia.
+
+### P-24 · Render desplegaba en cada push aunque las pruebas fallaran
+- **Problema:** con auto-deploy, Render construye cualquier commit de la rama, sin esperar al CI.
+- **Solución:** `autoDeploy: false` en ambos servicios. El job `deploy` llama al **Deploy Hook** de Render solo después de `ci-ok`, `package` y `docker`. Además, `healthCheckPath: /up`, así Render no cambia el tráfico a una versión que no arranca.
+
+### P-25 · El Deploy Hook es asíncrono: "200 OK" no significa "desplegado"
+- **Problema:** el hook solo encola el deploy; el pipeline no sabría si la nueva versión quedó en línea ni cuándo.
+- **Solución:** el job consulta `GET /api/version` cada 20 s (máximo 20 min, para cubrir el build y el arranque en frío del plan free) hasta que devuelva **el SHA exacto del commit** (`RENDER_GIT_COMMIT`). Después corre un smoke test: `/up` 200, login inválido 401/422 (demuestra que la BD responde), rutas protegidas 401 sin token y, en staging, login real + `GET /api/ordenes` 200. El reporte se sube como artefacto `deploy-report-<entorno>`.
+
+### P-26 · Release solo después de verificar staging
+- **Requisito:** el tag `v1.0.0` y el GitHub Release se crean **solo si staging pasa la verificación**.
+- **Solución:** job `release` con `needs: [deploy, docker]` que solo corre en pushes a `staging`. Es **idempotente**: si el tag ya existe, no hace nada (los siguientes pushes a staging no fallan). Adjunta al release el tarball de la app + `SHA256SUMS.txt`, `build-info.json`, el reporte de verificación de staging, cobertura y resultados de pruebas, y etiqueta en GHCR **la misma imagen (mismo digest)** verificada como `:v1.0.0`. Las notas salen de la sección `## [1.0.0]` de `CHANGELOG.md`. La versión se puede cambiar con la variable de repositorio `RELEASE_TAG`.
+
+### P-27 · Secretos de despliegue por entorno
+- **Solución:** GitHub **Environments** `staging` y `production`, cada uno con su secret `RENDER_DEPLOY_HOOK_URL` y su variable `APP_URL`. `production` exige **aprobación manual** (required reviewers). Si falta configuración, el job falla con un mensaje explícito en lugar de "pasar" en silencio.
+
+---
+
+## Fase 4 — Gobernanza del repositorio
+
+### P-28 · Cualquiera podía hacer push directo a `main`/`staging`
+- **Problema:** sin reglas de protección, un push directo salta el CI y (con el CD) desplegaría sin revisión.
+- **Solución:** protección de ramas `main`, `staging` y `develop`: PR obligatorio, check requerido **`CI OK`** (ver P-16), rama actualizada antes de fusionar, sin force-push ni borrado. En `main` y `staging` además se exige 1 aprobación y que las conversaciones estén resueltas.
+
+### P-29 · Dependencias sin mantenimiento automático
+- **Problema:** las vulnerabilidades de P-11 se acumularon porque nadie actualizaba dependencias.
+- **Solución:** `.github/dependabot.yml` semanal para **composer**, **npm**, **github-actions** y **docker** (imagen base de FrankenPHP). Los PRs apuntan a `develop` y se agrupan (laravel/*, symfony/*, dev) para no saturar el repo.
+
+### P-30 · PRs e issues sin estructura
+- **Solución:** plantilla de PR con checklist (Pint, pruebas, migraciones en SQLite **y** PostgreSQL, variables de entorno, bitácora, changelog), formularios de issue (bug y funcionalidad, con el entorno y la versión de `/api/version`) y `CODEOWNERS` para la revisión obligatoria de la infraestructura (`.github/`, `Dockerfile`, `docker/`, `render.yaml`).
+
+---
+
+## Fase 5 — Documentación
+
+### P-31 · README genérico de Laravel
+- **Problema:** el `README.md` era el del esqueleto de Laravel; no explicaba el proyecto, cómo correrlo, el flujo de ramas ni el pipeline.
+- **Solución:** README del proyecto con stack, estructura, puesta en marcha (Docker y PHP local), pruebas contra PostgreSQL, flujo de ramas, diagrama del pipeline (Mermaid), tabla de jobs y artefactos, configuración de Render y GitHub Environments, y referencia de la API. Se añadió `CHANGELOG.md` (fuente de las notas del release).
+
+---
+
+## Puesta en marcha en GitHub
+
+### P-32 · Coste de minutos de la matriz multiplataforma en un repo privado
+- **Problema:** el repositorio es privado. En el plan gratuito de GitHub hay 2 000 minutos/mes y los runners **Windows cuentan ×2** y **macOS ×10**. La matriz completa (12 jobs) consume ≈ 270 minutos facturables por ejecución; correrla en cada PR y en cada push agotaría la cuota en pocos días.
+- **Solución:** matriz dinámica con `fromJSON`: en **pull requests** solo `ubuntu-latest` (4 jobs: PHP 8.2/8.3 × SQLite/PostgreSQL); en **pushes a `develop`, `staging` y `main`** y en ejecución manual (`workflow_dispatch`) la matriz completa Ubuntu/Windows/macOS. Así cada cambio que entra a una rama de integración o despliegue se valida en los tres SO, y los PRs dan feedback rápido y barato.
+- **Además:** las fases se integraron con PRs apilados (cada fase con su PR) para ejecutar el CI completo una sola vez al llegar a `develop`.
+
+### P-33 · Permisos insuficientes para configurar el repositorio
+- **Problema:** la cuenta usada para la automatización tiene permiso **Write**, no **Admin**, sobre `Sosa1716/LaravelApp`. La protección de ramas, los Environments y sus secrets requieren Admin (la API responde 404).
+- **Solución:** esa configuración la aplica el propietario del repositorio siguiendo la sección *Entornos y configuración* del README. Todo lo demás (código, pipeline, PRs, merges) se automatizó.
