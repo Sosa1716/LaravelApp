@@ -23,7 +23,7 @@ class HealthTest extends TestCase
 
         $this->getJson('/api/version')
             ->assertOk()
-            ->assertJsonStructure(['app', 'env', 'version'])
+            ->assertJsonStructure(['app', 'env', 'version', 'booted_at'])
             ->assertJsonPath('version', 'abc1234');
     }
 
