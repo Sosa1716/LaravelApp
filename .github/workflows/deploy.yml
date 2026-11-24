@@ -86,10 +86,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Matriz completa (3 SO) en pushes a develop/staging/main y en ejecución
-        # manual. En PRs solo Ubuntu: en repos privados Windows cuesta 2× y
-        # macOS 10× minutos de Actions (ver docs/problemas.md, P-32).
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest","macos-latest"]') }}
+        # Matriz completa (3 SO) en pushes a staging/main (lo que se despliega)
+        # y en ejecución manual. En PRs y develop solo Ubuntu: en repos privados
+        # Windows cuesta 2× y macOS 10× minutos de Actions (docs/problemas.md, P-32).
+        os: >-
+          ${{ fromJSON(
+            ((github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main'))
+              || github.event_name == 'workflow_dispatch')
+            && '["ubuntu-latest","windows-latest","macos-latest"]'
+            || '["ubuntu-latest"]') }}
         php: ['8.2', '8.3']
         db: [sqlite, pgsql]
         include:
@@ -282,7 +287,8 @@ jobs:
           mkdir -p reports
           APP_KEY="base64:$(openssl rand -base64 32)"
           # PORT=10000 simula a Render, que inyecta el puerto en tiempo de ejecución.
-          docker run -d --name smoke -p 10000:10000 \
+          # --cap-drop=ALL simula sus restricciones de seguridad (ver P-37).
+          docker run -d --name smoke -p 10000:10000 --cap-drop=ALL \
             -e PORT=10000 -e APP_KEY="$APP_KEY" \
             -e DB_CONNECTION=sqlite -e SEED_ON_DEPLOY=true \
             -e SESSION_DRIVER=cookie -e CACHE_STORE=file \
