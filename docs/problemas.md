@@ -208,3 +208,15 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 - **Reproducción local:** `docker run --cap-drop=ALL ...` → `/usr/local/bin/entrypoint: 57: exec: frankenphp: Operation not permitted`, exit 126 (idéntico a Render).
 - **Solución:** `setcap -r /usr/local/bin/frankenphp` en el `Dockerfile`. No se necesita la capacidad porque el servidor escucha en `$PORT` (8080/10000). Verificado con `--cap-drop=ALL`: `/up` 200, login 200, proceso como `uid=10001`.
 - **Prevención:** el smoke test del job `docker` ahora arranca el contenedor con `--cap-drop=ALL`. Se comprobó que con esa opción la imagen anterior falla (exit 126), así que el CI detecta este tipo de error antes de llegar a Render.
+
+### P-38 · Staging arrancaba sin datos de prueba (login del admin fallaba)
+- **Síntoma:** con el exit 126 corregido, Render ya servía el commit nuevo y pasaban `/up` (200), login inválido (422) y ruta protegida sin token (401), pero falló el chequeo **login con el admin sembrado** (esperado 200). El release no se creó.
+- **Diagnóstico:** `/api/version` respondía `"app":"Laravel","env":"production"` en vez de `"El Pinguin (staging)"`/`"staging"`. Al servicio de staging solo se le había cargado `APP_KEY`; faltaban `SEED_ON_DEPLOY=true` y el resto de variables, así que no se ejecutaban los seeders.
+- **Solución:** se cargaron en Render las variables de staging definidas en `render.yaml` (`APP_ENV=staging`, `SEED_ON_DEPLOY=true`, `DB_CONNECTION=sqlite`, etc.).
+- **Lección:** el smoke test con login real detectó un **ambiente mal configurado** que los chequeos básicos (`/up`) no habrían detectado. Exponer `app` y `env` en `/api/version` hizo el diagnóstico inmediato.
+
+### P-39 · La verificación no distinguía un redeploy del mismo commit
+- **Síntoma:** al relanzar el deploy tras corregir P-38, el pipeline mostró *"Render ya sirve 2762670"* **en el mismo segundo** en que llamó al hook y verificó la instancia **anterior** (todavía sin datos). Unos 30 s después, la instancia nueva ya respondía login 200.
+- **Causa:** la espera comparaba solo el SHA de `/api/version`. Al redesplegar el mismo commit (cambio de variables, reintento), la instancia vieja ya devolvía ese SHA, así que el pipeline daba el deploy por terminado antes de tiempo. La verificación podía aprobar (o rechazar) una instancia que no era la desplegada.
+- **Solución:** `docker/entrypoint.sh` exporta `APP_BOOTED_AT` (momento de arranque de esa instancia) y `/api/version` lo expone como `booted_at`. El job `deploy` lee `booted_at` **antes** de llamar al hook y espera a que `/api/version` devuelva **el SHA del commit y un `booted_at` distinto**. Así se verifica siempre la instancia recién desplegada.
+- **Verificación local:** dos contenedores de la misma imagen reportan `booted_at` distintos (`04:15:03Z` y `04:15:05Z`).

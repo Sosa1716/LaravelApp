@@ -15,6 +15,7 @@ Route::get('/version', fn () => response()->json([
     'app' => config('app.name'),
     'env' => config('app.env'),
     'version' => config('app.version'),
+    'booted_at' => config('app.booted_at'),
 ]));
 
 Route::middleware('auth:sanctum')->group(function () {

@@ -408,28 +408,37 @@ jobs:
 
       - name: Disparar deploy en Render
         run: |
+          # Se guarda el arranque de la instancia actual ANTES del deploy: si se
+          # redespliega el mismo commit, el SHA no cambia pero booted_at sí (P-39).
+          before=$(curl -s --max-time 90 "$APP_URL/api/version" \
+            | sed -n 's/.*"booted_at":"\([^"]*\)".*/\1/p' || true)
+          echo "PREVIOUS_BOOT=${before}" >> "$GITHUB_ENV"
+          echo "Instancia actual arrancada en: '${before:-desconocido}'"
+
           # Render construye el último commit de la rama que sigue el servicio.
           # autoDeploy está desactivado: solo despliega el pipeline tras pasar CI.
           curl -fsS -X POST "$DEPLOY_HOOK" -o /dev/null
           echo "Deploy de ${GITHUB_SHA::7} solicitado a Render ($TARGET)."
 
-      - name: Esperar a que Render sirva este commit
+      - name: Esperar a que Render sirva la nueva instancia
         run: |
-          # Render mantiene la versión anterior hasta que la nueva pasa su
-          # health check; se espera hasta que /api/version devuelva este SHA.
+          # Render mantiene la instancia anterior hasta que la nueva pasa su
+          # health check. Se espera a que /api/version devuelva ESTE commit y
+          # una instancia NUEVA (booted_at distinto al de antes del deploy).
           deadline=$(( $(date +%s) + 20 * 60 ))
           while :; do
-            current=$(curl -s --max-time 90 "$APP_URL/api/version" \
-              | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
-            if [ "$current" = "$GITHUB_SHA" ]; then
-              echo "Render ya sirve ${GITHUB_SHA::7}."
+            body=$(curl -s --max-time 90 "$APP_URL/api/version" || true)
+            current=$(echo "$body" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+            booted=$(echo "$body" | sed -n 's/.*"booted_at":"\([^"]*\)".*/\1/p')
+            if [ "$current" = "$GITHUB_SHA" ] && [ -n "$booted" ] && [ "$booted" != "$PREVIOUS_BOOT" ]; then
+              echo "Render ya sirve ${GITHUB_SHA::7} en una instancia nueva (arrancada en $booted)."
               break
             fi
             if [ "$(date +%s)" -ge "$deadline" ]; then
-              echo "::error::Timeout: Render sigue sirviendo '${current:-sin respuesta}' en lugar de $GITHUB_SHA"
+              echo "::error::Timeout: Render sirve '${current:-sin respuesta}' (arranque '${booted:-?}') en lugar de una instancia nueva de $GITHUB_SHA"
               exit 1
             fi
-            echo "Versión actual: '${current:-sin respuesta}'. Reintentando en 20s..."
+            echo "Actual: versión '${current:-sin respuesta}', arranque '${booted:-?}'. Reintentando en 20s..."
             sleep 20
           done
 
