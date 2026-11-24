@@ -41,6 +41,9 @@ return [
 
     'version' => env('RENDER_GIT_COMMIT', env('APP_VERSION', 'dev')),
 
+    // Momento de arranque del contenedor (lo define docker/entrypoint.sh).
+    'booted_at' => env('APP_BOOTED_AT'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode

@@ -41,6 +41,11 @@ fi
 
 php artisan storage:link --no-interaction >/dev/null 2>&1 || true
 
+# Momento de arranque de ESTA instancia: el pipeline lo usa para distinguir
+# un redeploy del mismo commit de la instancia anterior (ver P-39).
+APP_BOOTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export APP_BOOTED_AT
+
 # Cachear con las variables de entorno reales del contenedor (no en el build).
 php artisan config:cache
 php artisan route:cache
