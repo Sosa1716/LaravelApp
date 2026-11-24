@@ -13,3 +13,14 @@ public/hot
 Thumbs.db
 .DS_Store
 
+.env
+.env.*
+!.env.example
+.github
+docs
+tests
+.agents
+.codex-build
+skills-lock.json
+database/*.sqlite*
+docker-compose.yml

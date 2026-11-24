@@ -30,6 +30,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Versión desplegada
+    |--------------------------------------------------------------------------
+    |
+    | Commit que está corriendo. Render expone RENDER_GIT_COMMIT en servicios
+    | construidos desde git; la imagen de GHCR recibe APP_VERSION en el build.
+    | El pipeline de CI/CD lo consulta en /api/version para verificar el deploy.
+    |
+    */
+
+    'version' => env('RENDER_GIT_COMMIT', env('APP_VERSION', 'dev')),
+
+    // Momento de arranque del contenedor (lo define docker/entrypoint.sh).
+    'booted_at' => env('APP_BOOTED_AT'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |

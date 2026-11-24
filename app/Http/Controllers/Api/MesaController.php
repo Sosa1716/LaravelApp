@@ -26,16 +26,16 @@ class MesaController extends Controller
                     'disponible',
                     'ocupada',
                     'reservada',
-                    'fuera_servicio'
-                ])
-            ]
+                    'fuera_servicio',
+                ]),
+            ],
         ]);
 
         $mesa = Mesa::create($request->all());
 
         return response()->json([
             'mensaje' => 'Mesa registrada correctamente',
-            'mesa' => $mesa
+            'mesa' => $mesa,
         ], 201);
     }
 
@@ -43,9 +43,9 @@ class MesaController extends Controller
     {
         $mesa = Mesa::find($id);
 
-        if (!$mesa) {
+        if (! $mesa) {
             return response()->json([
-                'mensaje' => 'Mesa no encontrada'
+                'mensaje' => 'Mesa no encontrada',
             ], 404);
         }
 
@@ -56,9 +56,9 @@ class MesaController extends Controller
     {
         $mesa = Mesa::find($id);
 
-        if (!$mesa) {
+        if (! $mesa) {
             return response()->json([
-                'mensaje' => 'Mesa no encontrada'
+                'mensaje' => 'Mesa no encontrada',
             ], 404);
         }
 
@@ -68,7 +68,7 @@ class MesaController extends Controller
                 'required',
                 'integer',
                 'min:1',
-                Rule::unique('mesas', 'numero')->ignore($mesa->id)
+                Rule::unique('mesas', 'numero')->ignore($mesa->id),
             ],
 
             'estado' => [
@@ -78,16 +78,16 @@ class MesaController extends Controller
                     'disponible',
                     'ocupada',
                     'reservada',
-                    'fuera_servicio'
-                ])
-            ]
+                    'fuera_servicio',
+                ]),
+            ],
         ]);
 
         $mesa->update($request->all());
 
         return response()->json([
             'mensaje' => 'Mesa actualizada correctamente',
-            'mesa' => $mesa
+            'mesa' => $mesa,
         ]);
     }
 
@@ -95,16 +95,16 @@ class MesaController extends Controller
     {
         $mesa = Mesa::find($id);
 
-        if (!$mesa) {
+        if (! $mesa) {
             return response()->json([
-                'mensaje' => 'Mesa no encontrada'
+                'mensaje' => 'Mesa no encontrada',
             ], 404);
         }
 
         $mesa->delete();
 
         return response()->json([
-            'mensaje' => 'Mesa eliminada correctamente'
+            'mensaje' => 'Mesa eliminada correctamente',
         ]);
     }
 }

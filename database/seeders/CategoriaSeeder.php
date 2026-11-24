@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Categoria;
+use Illuminate\Database\Seeder;
 
 class CategoriaSeeder extends Seeder
 {
@@ -25,7 +25,7 @@ class CategoriaSeeder extends Seeder
             [
                 'nombre' => 'Postres',
                 'descripcion' => 'Postres y alimentos dulces',
-            ]
+            ],
         ];
 
         foreach ($categorias as $categoria) {
@@ -33,7 +33,7 @@ class CategoriaSeeder extends Seeder
                 ['nombre' => $categoria['nombre']],
                 [
                     'descripcion' => $categoria['descripcion'],
-                    'activo' => true
+                    'activo' => true,
                 ]
             );
         }

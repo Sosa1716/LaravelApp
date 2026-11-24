@@ -1,0 +1,37 @@
+name: Reporte de bug
+description: Algo no funciona como debería
+labels: [bug]
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: ¿Qué pasó?
+      description: Comportamiento observado y comportamiento esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. POST /api/login con ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: entorno
+    attributes:
+      label: Entorno
+      options: [local, staging, production]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: Valor de "version" en GET /api/version
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / respuesta
+      render: shell

@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Orden extends Model
 {
     protected $table = 'ordenes';
-    
+
     protected $fillable = [
         'mesa_id',
         'user_id',
         'estado',
-        'total'
+        'total',
     ];
 
     public function mesa()

@@ -17,7 +17,7 @@ return new class extends Migration
 
             $table->enum('metodo', [
                 'efectivo',
-                'tarjeta'
+                'tarjeta',
             ]);
 
             $table->decimal('monto', 10, 2);
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->enum('estado', [
                 'pendiente',
                 'pagado',
-                'cancelado'
+                'cancelado',
             ])->default('pendiente');
 
             $table->timestamps();
