@@ -220,3 +220,9 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 - **Causa:** la espera comparaba solo el SHA de `/api/version`. Al redesplegar el mismo commit (cambio de variables, reintento), la instancia vieja ya devolvía ese SHA, así que el pipeline daba el deploy por terminado antes de tiempo. La verificación podía aprobar (o rechazar) una instancia que no era la desplegada.
 - **Solución:** `docker/entrypoint.sh` exporta `APP_BOOTED_AT` (momento de arranque de esa instancia) y `/api/version` lo expone como `booted_at`. El job `deploy` lee `booted_at` **antes** de llamar al hook y espera a que `/api/version` devuelva **el SHA del commit y un `booted_at` distinto**. Así se verifica siempre la instancia recién desplegada.
 - **Verificación local:** dos contenedores de la misma imagen reportan `booted_at` distintos (`04:15:03Z` y `04:15:05Z`).
+
+### P-40 · El release falló al descargar artefactos (`*.dockerbuild`)
+- **Síntoma:** pipeline de staging con todo en verde, incluida la verificación post-deploy de la instancia nueva (5/5 chequeos), pero el job `release` falló en "Descargar artefactos del pipeline": *"Unable to download and extract artifact: Artifact download failed after 5 retries"*.
+- **Causa:** `docker/build-push-action@v7` sube automáticamente **registros de build** como artefactos (`<owner>~<repo>~<id>.dockerbuild`) que no son ZIP estándar. El paso descargaba *todos* los artefactos sin filtro y falló al intentar extraer esos registros.
+- **Solución:** `download-artifact` con `pattern: '{app-release,docker-build,deploy-report-staging,coverage-report,test-results-*}'`, es decir, solo lo que se adjunta al release. Patrón comprobado con minimatch: incluye los 5 tipos y excluye los `.dockerbuild`.
+- **Nota:** relanzar solo el job no basta, porque un *re-run* usa el workflow del commit original. La corrección se integró por el flujo normal (`develop` → `staging`).
