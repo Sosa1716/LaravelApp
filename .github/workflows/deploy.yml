@@ -134,8 +134,8 @@ jobs:
 
       # PostgreSQL en los 3 sistemas operativos (los service containers de
       # GitHub solo funcionan en Linux, por eso se usa esta acción).
-      - name: Levantar PostgreSQL
-        if: matrix.db == 'pgsql'
+      - name: Levantar PostgreSQL (Linux/macOS)
+        if: matrix.db == 'pgsql' && runner.os != 'Windows'
         uses: ikalnytskyi/action-setup-postgres@v9
         with:
           username: laravel
@@ -144,6 +144,18 @@ jobs:
           port: 5432
           # Misma versión mayor que docker-compose.yml (paridad con producción).
           postgres-version: '16'
+
+      # En Windows v9 descarga PostgreSQL con Chocolatey (servicio externo que
+      # puede caer: P-41). v6 usa el PostgreSQL ya instalado en el runner, sin
+      # descargas. Mismo usuario/contraseña/BD que en Linux/macOS.
+      - name: Levantar PostgreSQL (Windows, preinstalado en el runner)
+        if: matrix.db == 'pgsql' && runner.os == 'Windows'
+        uses: ikalnytskyi/action-setup-postgres@v6
+        with:
+          username: laravel
+          password: secret
+          database: testing
+          port: 5432
 
       - name: Configurar conexión PostgreSQL
         if: matrix.db == 'pgsql'
