@@ -524,6 +524,9 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: artifacts
+          # Solo los artefactos del release. build-push-action también sube
+          # registros "*.dockerbuild" que no se pueden descargar/extraer (P-40).
+          pattern: '{app-release,docker-build,deploy-report-staging,coverage-report,test-results-*}'
 
       - name: Preparar assets y notas del release
         if: steps.exists.outputs.value == 'false'
