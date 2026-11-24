@@ -175,7 +175,7 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 
 ### P-32 · Coste de minutos de la matriz multiplataforma en un repo privado
 - **Problema:** el repositorio es privado. En el plan gratuito de GitHub hay 2 000 minutos/mes y los runners **Windows cuentan ×2** y **macOS ×10**. La matriz completa (12 jobs) consume ≈ 270 minutos facturables por ejecución; correrla en cada PR y en cada push agotaría la cuota en pocos días.
-- **Solución:** matriz dinámica con `fromJSON`: en **pull requests** solo `ubuntu-latest` (4 jobs: PHP 8.2/8.3 × SQLite/PostgreSQL); en **pushes a `develop`, `staging` y `main`** y en ejecución manual (`workflow_dispatch`) la matriz completa Ubuntu/Windows/macOS. Así cada cambio que entra a una rama de integración o despliegue se valida en los tres SO, y los PRs dan feedback rápido y barato.
+- **Solución:** matriz dinámica con `fromJSON`. Primera versión: solo Ubuntu en PRs y matriz completa en pushes a `develop`, `staging` y `main`. Tras varias ejecuciones completas se ajustó (ver P-37): **matriz completa Ubuntu/Windows/macOS solo en pushes a `staging` y `main`** (lo que se despliega) y en ejecución manual (`workflow_dispatch`); **PRs y `develop` solo `ubuntu-latest`** (4 jobs: PHP 8.2/8.3 × SQLite/PostgreSQL). Todo lo que llega a un entorno desplegado queda validado en los tres SO, y la integración diaria es rápida y barata.
 - **Además:** las fases se integraron con PRs apilados (cada fase con su PR) para ejecutar el CI completo una sola vez al llegar a `develop`.
 
 ### P-33 · Permisos insuficientes para configurar el repositorio
@@ -191,3 +191,20 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 - **Causa:** `ikalnytskyi/action-setup-postgres@v6` solo instala PostgreSQL con Homebrew en macOS 13/14; la imagen actual de `macos-latest` es más nueva y ya no trae PostgreSQL preinstalado, así que `initdb` no existía.
 - **Solución:** actualizar a `@v9`, que instala PostgreSQL con Homebrew en cualquier versión de macOS, y fijar `postgres-version: "16"` para usar en CI la misma versión mayor que `docker-compose.yml`. Los parámetros `username/password/database/port` no cambiaron.
 - **Lección:** `macos-latest` cambia de versión sin aviso; por eso la matriz completa corre en cada push a las ramas de integración.
+
+---
+
+## Primer despliegue a staging
+
+### P-36 · El contenedor de staging se detenía con *exit status 1*
+- **Síntoma:** primer push a `staging` (PR #8): CI 12/12 en verde y Render construyó la imagen, pero el deploy falló con *"Exited with status 1 while running your code"*. El job `deploy` esperó 20 minutos a que `/api/version` sirviera el commit, terminó por timeout y **el release no se creó** (comportamiento esperado: sin verificación no hay versión).
+- **Diagnóstico:** el log de Render mostraba el mensaje del entrypoint: `[entrypoint] ERROR: APP_KEY no está definida`. Al crear el servicio de staging no se cargó la variable `APP_KEY`.
+- **Solución:** se generó una clave con `php artisan key:generate --show` y se cargó en *Environment* del servicio de staging. Se relanzó **solo el job de deploy** (`gh run rerun --failed`), sin repetir las pruebas.
+- **Lección:** la validación de `APP_KEY` en el entrypoint (P-22) cumplió su función: el contenedor se negó a arrancar con un error claro en lugar de quedar en línea y fallar en cada petición, y Render conservó la versión anterior.
+
+### P-37 · Render: `exec: frankenphp: Operation not permitted` (*exit status 126*)
+- **Síntoma:** tras cargar `APP_KEY`, el siguiente deploy avanzó más (migraciones, seed, cachés) y falló con *"Exited with status 126"* justo al lanzar el servidor.
+- **Causa:** la imagen oficial de FrankenPHP marca el binario con la *file capability* `cap_net_bind_service=ep` (`getcap /usr/local/bin/frankenphp`) para poder usar puertos < 1024 sin root. Render ejecuta los contenedores sin esa capacidad; cuando un usuario sin privilegios (`app`, uid 10001) ejecuta un binario que la exige, el kernel lo rechaza con `EPERM`. En Docker Desktop y en el smoke test del CI funcionaba porque Docker concede esa capacidad por defecto.
+- **Reproducción local:** `docker run --cap-drop=ALL ...` → `/usr/local/bin/entrypoint: 57: exec: frankenphp: Operation not permitted`, exit 126 (idéntico a Render).
+- **Solución:** `setcap -r /usr/local/bin/frankenphp` en el `Dockerfile`. No se necesita la capacidad porque el servidor escucha en `$PORT` (8080/10000). Verificado con `--cap-drop=ALL`: `/up` 200, login 200, proceso como `uid=10001`.
+- **Prevención:** el smoke test del job `docker` ahora arranca el contenedor con `--cap-drop=ALL`. Se comprobó que con esa opción la imagen anterior falla (exit 126), así que el CI detecta este tipo de error antes de llegar a Render.

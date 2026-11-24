@@ -62,7 +62,14 @@ RUN composer dump-autoload --optimize --classmap-authoritative --no-dev --no-int
 
 # Usuario sin privilegios: solo puede escribir en storage, bootstrap/cache,
 # database (SQLite de staging) y los directorios de datos de Caddy.
-RUN useradd --uid ${UID} --no-create-home --shell /usr/sbin/nologin app \
+#
+# setcap -r: la imagen base marca el binario con cap_net_bind_service (para
+# puertos <1024). Plataformas como Render ejecutan los contenedores sin esa
+# capacidad y el kernel se niega a ejecutar un binario que la exige:
+# "exec: frankenphp: Operation not permitted" (exit 126). Escuchamos en un
+# puerto alto ($PORT), así que no la necesitamos (docs/problemas.md, P-37).
+RUN setcap -r /usr/local/bin/frankenphp \
+    && useradd --uid ${UID} --no-create-home --shell /usr/sbin/nologin app \
     && chown -R app:app storage bootstrap/cache database /data/caddy /config/caddy \
     && chmod -R ug+rwX,o-rwx storage bootstrap/cache database
 
