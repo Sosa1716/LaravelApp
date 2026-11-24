@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -61,7 +61,7 @@ jobs:
         run: composer validate --strict
 
       - name: Caché de Composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache/files
           key: composer-${{ runner.os }}-8.2-${{ hashFiles('composer.lock') }}
@@ -104,7 +104,7 @@ jobs:
             db: sqlite
             coverage: true
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -118,7 +118,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Caché de Composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
@@ -150,7 +150,7 @@ jobs:
       # descargas. Mismo usuario/contraseña/BD que en Linux/macOS.
       - name: Levantar PostgreSQL (Windows, preinstalado en el runner)
         if: matrix.db == 'pgsql' && runner.os == 'Windows'
-        uses: ikalnytskyi/action-setup-postgres@v6
+        uses: ikalnytskyi/action-setup-postgres@v9
         with:
           username: laravel
           password: secret
@@ -181,7 +181,7 @@ jobs:
 
       - name: Subir resultados de pruebas
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}-php${{ matrix.php }}-${{ matrix.db }}
           path: reports/junit.xml
@@ -190,7 +190,7 @@ jobs:
 
       - name: Subir reporte de cobertura
         if: matrix.coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
@@ -221,7 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -242,7 +242,7 @@ jobs:
           sha256sum dist/*.tar.gz | tee dist/SHA256SUMS.txt
 
       - name: Subir artefacto de la aplicación
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: app-release
           path: dist/
@@ -264,7 +264,7 @@ jobs:
       image: ${{ steps.img.outputs.name }}
       digest: ${{ steps.push.outputs.digest }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Nombre de la imagen (GHCR exige minúsculas)
         id: img
@@ -374,7 +374,7 @@ jobs:
 
       - name: Subir artefacto del build Docker
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docker-build
           path: |
@@ -492,7 +492,7 @@ jobs:
 
       - name: Subir reporte de verificación
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: deploy-report-${{ env.TARGET }}
           path: reports/
@@ -517,7 +517,7 @@ jobs:
       DIGEST: ${{ needs.docker.outputs.digest }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -533,7 +533,7 @@ jobs:
 
       - name: Descargar artefactos del pipeline
         if: steps.exists.outputs.value == 'false'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           # Solo los artefactos del release. build-push-action también sube
