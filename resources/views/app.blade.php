@@ -193,7 +193,7 @@
                 <div class="flex items-center gap-2">
                     <span class="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-300 font-medium">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        API móvil
+                        API Web
                     </span>
 
                     <button onclick="fetchOrdenes()" title="Actualizar órdenes"
@@ -337,8 +337,7 @@
                 </button>
                 <button onclick="switchAdminTab('usuarios')" id="tab-btn-usuarios"
                     class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
-                    👥 Usuarios
-                    <span class="text-[9px] bg-[#EBD140]/25 text-[#EBD140] px-1.5 py-0.5 rounded border border-[#EBD140]/40 font-bold">Pronto</span>
+                    👥 Usuarios & Meseros
                 </button>
                 <button onclick="switchAdminTab('reportes')" id="tab-btn-reportes"
                     class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
@@ -569,46 +568,35 @@
                 </div>
             </div>
 
-            <!-- 7. TAB: USUARIOS (PENDIENTE DE BACKEND) -->
+            <!-- 7. TAB: USUARIOS & MESEROS -->
             <div id="tab-content-usuarios" class="admin-tab-content hidden space-y-4">
-                <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl shrink-0">
-                            👥
-                        </div>
-                        <div>
-                            <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 mb-2">
-                                Módulo Pendiente de Backend
-                            </span>
-                            <h2 class="text-lg font-bold text-slate-900">Gestión de Usuarios y Empleados</h2>
-                            <p class="text-sm text-slate-600 mt-1 leading-relaxed max-w-2xl">
-                                Este módulo forma parte del alcance funcional original del sistema. Actualmente se encuentra pendiente de la implementación de los endpoints REST en el backend de Laravel (<code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-800">/api/usuarios</code>).
-                            </p>
-                            <p class="text-xs text-slate-500 mt-2">
-                                🔒 Siguiendo la regla de arquitectura, la interfaz web no inventa endpoints sin coordinarlos previamente con el desarrollador de backend.
-                            </p>
-                        </div>
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div>
+                        <h2 class="text-base font-extrabold text-[#2E3C43] tracking-tight">Gestión de Personal & Meseros</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Crea meseros y empleados para que puedan iniciar sesión en la app y registrar comandas</p>
                     </div>
+                    <button onclick="openModalUsuario()"
+                        class="btn-action px-4 py-2.5 bg-[#2E3C43] hover:bg-[#202c32] text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm">
+                        <span>👤 + Nuevo Empleado / Mesero</span>
+                    </button>
+                </div>
 
-                    <div class="mt-8 pt-6 border-t border-slate-100">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Usuarios sembrados en el sistema actual:</h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                                <span class="font-bold text-slate-800">Administrador</span>
-                                <p class="text-slate-500 mt-0.5">admin@restaurante.com</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800">Rol: Administrador</span>
-                            </div>
-                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                                <span class="font-bold text-slate-800">Cocina</span>
-                                <p class="text-slate-500 mt-0.5">cocina@restaurante.com</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">Rol: Cocina</span>
-                            </div>
-                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                                <span class="font-bold text-slate-800">Mesero</span>
-                                <p class="text-slate-500 mt-0.5">mesero@restaurante.com</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">Rol: Mesero</span>
-                            </div>
-                        </div>
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-50 text-[#2E3C43] font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+                                <tr>
+                                    <th class="p-3.5">ID</th>
+                                    <th class="p-3.5">Usuario / Empleado</th>
+                                    <th class="p-3.5">Correo Electrónico</th>
+                                    <th class="p-3.5">Rol en Restaurante</th>
+                                    <th class="p-3.5">Acceso Móvil</th>
+                                    <th class="p-3.5">Fecha Registro</th>
+                                    <th class="p-3.5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-usuarios" class="divide-y divide-slate-100"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -771,6 +759,46 @@
         </div>
     </div>
 
+    <!-- Modal Usuario / Mesero -->
+    <div id="modal-usuario" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <h3 id="modal-usuario-titulo" class="font-extrabold text-[#2E3C43] text-sm">Nuevo Empleado / Mesero</h3>
+                <button onclick="closeModalUsuario()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition-colors duration-150 text-lg leading-none">&times;</button>
+            </div>
+            <form id="form-usuario" onsubmit="saveUsuario(event)" class="p-5 space-y-4 text-xs">
+                <input type="hidden" id="usuario-id">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nombre Completo *</label>
+                    <input type="text" id="usuario-nombre" required placeholder="Ej. Juan Pérez" class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
+                    <input type="email" id="usuario-email" required placeholder="juan.mesero@restaurante.com" class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Rol en el Restaurante *</label>
+                    <select id="usuario-rol" required class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs font-semibold text-[#2E3C43] bg-slate-50"></select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1" id="label-usuario-password">Contraseña de Acceso *</label>
+                    <input type="password" id="usuario-password" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 border rounded-xl outline-none focus:border-[#2879A8] text-xs">
+                    <p class="text-[11px] text-slate-400 mt-1" id="help-usuario-password">Se usará para iniciar sesión en la app móvil o el panel web.</p>
+                </div>
+
+                <div class="p-3 bg-blue-50/80 border border-blue-200/70 rounded-xl text-blue-900 text-[11px] flex items-start gap-2">
+                    <span class="text-base shrink-0">📱</span>
+                    <p class="leading-relaxed">Los meseros creados con esta cuenta podrán iniciar sesión de inmediato en la app móvil para tomar órdenes en las mesas.</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModalUsuario()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition">Cancelar</button>
+                    <button type="submit" class="btn-action px-4 py-2 bg-[#2E3C43] hover:bg-[#202c32] text-white rounded-xl font-semibold shadow">Guardar Empleado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Contenedor flotante de notificaciones / toasts -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -785,6 +813,8 @@
         let allCategorias = [];
         let allMesas = [];
         let allPagos = [];
+        let allUsuarios = [];
+        let allRoles = [];
         let pollingInterval = null;
         let lastOrdersCount = 0;
 
@@ -1129,9 +1159,9 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="px-4 py-2 bg-slate-100/50 flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-100">
-                                <span>Mesero: <strong class="text-slate-700">${orden.user ? orden.user.name : 'N/A'}</strong></span>
-                                <span>Hora: <strong class="text-slate-700">${timeStr}</strong></span>
+                            <div class="px-4 py-2 bg-slate-100/60 flex items-center justify-between text-[11px] text-slate-600 border-b border-slate-100">
+                                <span class="inline-flex items-center gap-1.5 font-medium">Mesero: <strong class="bg-[#EBD140]/30 text-[#2E3C43] px-2 py-0.5 rounded-md border border-[#EBD140]/50 font-bold">👤 ${orden.user ? orden.user.name : 'Sin asignar'}</strong></span>
+                                <span>Hora: <strong class="text-slate-700 font-semibold">${timeStr}</strong></span>
                             </div>
                             <div class="p-4">
                                 <ul class="divide-y divide-slate-100">${platillosHtml}</ul>
@@ -1148,12 +1178,14 @@
         // ================= SECCIÓN ADMINISTRACIÓN =================
         async function loadAdminData(isSilent = false) {
             try {
-                const [rPlatillos, rCategorias, rMesas, rOrdenes, rPagos] = await Promise.all([
+                const [rPlatillos, rCategorias, rMesas, rOrdenes, rPagos, rUsuarios, rRoles] = await Promise.all([
                     fetch('/api/platillos', { headers: apiHeaders() }),
                     fetch('/api/categorias', { headers: apiHeaders() }),
                     fetch('/api/mesas', { headers: apiHeaders() }),
                     fetch('/api/ordenes', { headers: apiHeaders() }),
-                    fetch('/api/pagos', { headers: apiHeaders() })
+                    fetch('/api/pagos', { headers: apiHeaders() }),
+                    fetch('/api/usuarios', { headers: apiHeaders() }),
+                    fetch('/api/roles', { headers: apiHeaders() })
                 ]);
 
                 if (rPlatillos.ok) allPlatillos = await rPlatillos.json();
@@ -1161,6 +1193,8 @@
                 if (rMesas.ok) allMesas = await rMesas.json();
                 if (rOrdenes.ok) allAdminOrders = await rOrdenes.json();
                 if (rPagos.ok) allPagos = await rPagos.json();
+                if (rUsuarios.ok) allUsuarios = await rUsuarios.json();
+                if (rRoles.ok) allRoles = await rRoles.json();
 
                 renderAdminResumen();
                 renderAdminPlatillos();
@@ -1168,6 +1202,7 @@
                 renderAdminMesas();
                 renderAdminOrdenes();
                 renderAdminPagos();
+                renderAdminUsuarios();
             } catch (err) {
                 if (!isSilent) console.error("Error al cargar datos administrativos:", err);
             }
@@ -1210,6 +1245,8 @@
                     <div class="flex items-center gap-2">
                         <span class="font-extrabold text-[#2E3C43]">#${o.id}</span>
                         <span class="text-slate-500 font-medium">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</span>
+                        <span class="text-slate-300">·</span>
+                        <span class="text-[#2879A8] font-bold">👤 ${o.user ? o.user.name : 'S/A'}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</span>
@@ -1570,7 +1607,11 @@
                     <tr class="tr-hover">
                         <td class="p-3.5 font-extrabold text-[#2E3C43]">#${o.id}</td>
                         <td class="p-3.5 font-bold text-[#2E3C43]">Mesa ${o.mesa ? o.mesa.numero : 'S/N'}</td>
-                        <td class="p-3.5 text-slate-600">${o.user ? o.user.name : 'N/A'}</td>
+                        <td class="p-3.5">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200">
+                                👤 ${o.user ? o.user.name : 'Sin asignar'}
+                            </span>
+                        </td>
                         <td class="p-3.5 font-extrabold text-emerald-700">$${parseFloat(o.total || 0).toFixed(2)}</td>
                         <td class="p-3.5">
                             <span class="px-2.5 py-1 rounded-full text-xs font-bold border border-transparent ${badgeClass(o.estado)}">
@@ -1594,8 +1635,9 @@
 
             document.getElementById('modal-orden-titulo').innerText = `Comanda #${orden.id} - Mesa ${orden.mesa ? orden.mesa.numero : 'S/N'}`;
             document.getElementById('modal-orden-info').innerHTML = `
-                <div>
-                    <span class="text-slate-500">Mesero:</span> <strong>${orden.user ? orden.user.name : 'N/A'}</strong>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-500">Mesero que atendió:</span>
+                    <strong class="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-lg border border-emerald-200 font-bold text-xs">👤 ${orden.user ? orden.user.name : 'Sin asignar'}</strong>
                 </div>
                 <div>
                     <span class="text-slate-500">Estado:</span> <span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass(orden.estado)}">${orden.estado.charAt(0).toUpperCase() + orden.estado.slice(1)}</span>
@@ -1655,6 +1697,157 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        // ================= GESTIÓN DE USUARIOS Y MESEROS (CRUD) =================
+        function renderAdminUsuarios() {
+            const tbody = document.getElementById('tabla-usuarios');
+            if (!tbody) return;
+
+            let loggedUserId = null;
+            try {
+                const uStr = localStorage.getItem('user');
+                if (uStr) loggedUserId = JSON.parse(uStr).id;
+            } catch(e) {}
+
+            tbody.innerHTML = allUsuarios.map(u => {
+                const dateObj = new Date(u.created_at);
+                const fecha = isNaN(dateObj) ? '' : `${dateObj.toLocaleDateString()}`;
+                const rolNombre = u.role ? u.role.nombre : (u.role_id === 1 ? 'Administrador' : (u.role_id === 2 ? 'Mesero' : (u.role_id === 3 ? 'Cocina' : 'Usuario')));
+                
+                let badgeRol = 'bg-slate-100 text-slate-700 border-slate-200';
+                if (rolNombre === 'Administrador') {
+                    badgeRol = 'bg-[#C24840]/10 text-[#C24840] border-[#C24840]/30';
+                } else if (rolNombre === 'Mesero') {
+                    badgeRol = 'bg-[#2879A8]/10 text-[#2879A8] border-[#2879A8]/30';
+                } else if (rolNombre === 'Cocina') {
+                    badgeRol = 'bg-[#EBD140]/25 text-[#6c5806] border-[#EBD140]/40';
+                }
+
+                const initial = (u.name || 'U').charAt(0).toUpperCase();
+                const isSelf = loggedUserId && loggedUserId === u.id;
+
+                return `
+                    <tr class="tr-hover">
+                        <td class="p-3.5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-[#2E3C43] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                    ${initial}
+                                </div>
+                                <div>
+                                    <strong class="text-slate-900 block leading-tight font-bold">${u.name}</strong>
+                                    <span class="text-[11px] text-slate-400">ID: #${u.id}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-3.5 font-medium text-slate-700">${u.email}</td>
+                        <td class="p-3.5">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${badgeRol}">
+                                ${rolNombre}
+                            </span>
+                        </td>
+                        <td class="p-3.5">
+                            ${rolNombre === 'Mesero' ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">📱 App Móvil</span>` : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-medium border border-slate-200">💻 Panel Web</span>`}
+                        </td>
+                        <td class="p-3.5 text-slate-500 text-xs">${fecha}</td>
+                        <td class="p-3.5 text-right space-x-1">
+                            <button onclick="editUsuario(${u.id})" class="btn-action px-2.5 py-1 bg-[#2879A8]/10 hover:bg-[#2879A8]/20 text-[#2879A8] font-bold rounded-lg text-xs">Editar</button>
+                            ${isSelf ? '' : `<button onclick="deleteUsuario(${u.id})" class="btn-action px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#C24840] font-bold rounded-lg text-xs">Eliminar</button>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Llenar select del modal usuario con los roles disponibles
+            const selectRol = document.getElementById('usuario-rol');
+            if (selectRol && allRoles && allRoles.length) {
+                const currentVal = selectRol.value;
+                selectRol.innerHTML = allRoles.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
+                if (currentVal) selectRol.value = currentVal;
+            }
+        }
+
+        function openModalUsuario(usuario = null) {
+            document.getElementById('form-usuario').reset();
+            document.getElementById('usuario-id').value = usuario ? usuario.id : '';
+            document.getElementById('modal-usuario-titulo').innerText = usuario ? 'Editar Usuario / Empleado' : 'Nuevo Usuario / Empleado';
+            
+            const passInput = document.getElementById('usuario-password');
+            const passHelp = document.getElementById('help-usuario-password');
+
+            if (usuario) {
+                document.getElementById('usuario-nombre').value = usuario.name || '';
+                document.getElementById('usuario-email').value = usuario.email || '';
+                if (usuario.role_id) document.getElementById('usuario-rol').value = usuario.role_id;
+                passInput.required = false;
+                passHelp.innerText = 'Dejar vacío si no deseas cambiar la contraseña actual.';
+            } else {
+                passInput.required = true;
+                passHelp.innerText = 'Mínimo 6 caracteres. Con esta clave iniciará sesión en la app móvil o el panel web.';
+                // Predeterminar al rol Mesero si existe
+                const selectRol = document.getElementById('usuario-rol');
+                if (selectRol) {
+                    const meseroOption = Array.from(selectRol.options).find(o => o.text.toLowerCase().includes('mesero'));
+                    if (meseroOption) selectRol.value = meseroOption.value;
+                }
+            }
+
+            document.getElementById('modal-usuario').classList.remove('hidden');
+        }
+
+        function closeModalUsuario() {
+            document.getElementById('modal-usuario').classList.add('hidden');
+        }
+
+        function editUsuario(id) {
+            const u = allUsuarios.find(x => x.id === id);
+            if (u) openModalUsuario(u);
+        }
+
+        async function saveUsuario(e) {
+            e.preventDefault();
+            const id = document.getElementById('usuario-id').value;
+            const name = document.getElementById('usuario-nombre').value.trim();
+            const email = document.getElementById('usuario-email').value.trim();
+            const role_id = document.getElementById('usuario-rol').value;
+            const password = document.getElementById('usuario-password').value;
+
+            const payload = { name, email, role_id };
+            if (password) payload.password = password;
+
+            try {
+                const url = id ? `/api/usuarios/${id}` : '/api/usuarios';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method: method,
+                    headers: apiHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.mensaje || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Error al guardar usuario'));
+
+                closeModalUsuario();
+                showNotification(id ? 'Empleado actualizado correctamente' : 'Empleado registrado. Ya puede iniciar sesión en la app');
+                await loadAdminData();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deleteUsuario(id) {
+            if (!confirm('¿Estás seguro de eliminar este usuario/empleado?')) return;
+            try {
+                const res = await fetch(`/api/usuarios/${id}`, {
+                    method: 'DELETE',
+                    headers: apiHeaders()
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.mensaje || 'Error al eliminar usuario');
+                showNotification('Usuario eliminado correctamente');
+                await loadAdminData();
+            } catch (err) {
+                alert(err.message);
+            }
         }
     </script>
 </body>
