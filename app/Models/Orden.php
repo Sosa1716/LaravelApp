@@ -29,4 +29,14 @@ class Orden extends Model
     {
         return $this->hasMany(OrdenDetalle::class);
     }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class);
+    }
+
+    public function pago()
+    {
+        return $this->hasOne(Pago::class)->latestOfMany();
+    }
 }

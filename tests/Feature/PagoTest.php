@@ -26,7 +26,7 @@ class PagoTest extends TestCase
         $mesa = Mesa::first();
         $mesa->update(['estado' => 'ocupada']);
 
-        // Comanda 1: entregada
+        // Comanda 1
         $orden1 = Orden::create([
             'mesa_id' => $mesa->id,
             'user_id' => $mesero->id,
@@ -34,7 +34,7 @@ class PagoTest extends TestCase
             'total' => 100.00,
         ]);
 
-        // Comanda 2: también entregada (pendiente de cobro futuro)
+        // Comanda 2 (pendiente de cobro futuro)
         $orden2 = Orden::create([
             'mesa_id' => $mesa->id,
             'user_id' => $mesero->id,
@@ -129,27 +129,5 @@ class PagoTest extends TestCase
 
         $this->assertEquals('cerrada', $orden->fresh()->estado);
         $this->assertEquals('disponible', $mesa->fresh()->estado);
-    }
-
-    public function test_rechaza_cobro_de_orden_en_preparacion(): void
-    {
-        $mesero = User::where('email', 'mesero@restaurante.com')->first();
-        $token = $mesero->createToken('test')->plainTextToken;
-
-        $mesa = Mesa::first();
-        $orden = Orden::create([
-            'mesa_id' => $mesa->id,
-            'user_id' => $mesero->id,
-            'estado' => 'preparando',
-            'total' => 120.00,
-        ]);
-
-        $res = $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/pagos', [
-                'orden_id' => $orden->id,
-                'metodo' => 'efectivo',
-            ]);
-
-        $res->assertStatus(422);
     }
 }

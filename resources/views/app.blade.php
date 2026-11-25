@@ -1752,15 +1752,13 @@
 
                 return `
                     <tr class="tr-hover">
+                        <td class="p-3.5 font-bold text-slate-400">#${u.id}</td>
                         <td class="p-3.5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-full bg-[#2E3C43] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full bg-[#2E3C43] text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
                                     ${initial}
                                 </div>
-                                <div>
-                                    <strong class="text-slate-900 block leading-tight font-bold">${u.name}</strong>
-                                    <span class="text-[11px] text-slate-400">ID: #${u.id}</span>
-                                </div>
+                                <strong class="text-slate-900 block leading-tight font-bold">${u.name}</strong>
                             </div>
                         </td>
                         <td class="p-3.5 font-medium text-slate-700">${u.email}</td>
