@@ -965,12 +965,27 @@
             } catch(e) {}
         }
 
-        function showNotification(msg) {
+        function showNotification(msg, type = 'info') {
             const container = document.getElementById('toast-container');
             if (!container) return;
             const toast = document.createElement('div');
-            toast.className = 'pointer-events-auto bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 transform transition-all duration-300 translate-y-2 scale-95 opacity-0';
-            toast.innerHTML = `<span>🔔</span> <span>${msg}</span>`;
+
+            let bg = 'bg-[#2E3C43] border-slate-700 text-white';
+            let icon = '🔔';
+
+            if (type === 'error') {
+                bg = 'bg-[#C24840] border-red-700 text-white shadow-red-900/40';
+                icon = '⚠️';
+            } else if (type === 'success') {
+                bg = 'bg-emerald-800 border-emerald-600 text-white shadow-emerald-900/40';
+                icon = '✅';
+            } else if (type === 'warning') {
+                bg = 'bg-[#b88c00] border-amber-500 text-white shadow-amber-900/40';
+                icon = '⚡';
+            }
+
+            toast.className = `pointer-events-auto ${bg} text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 scale-95 opacity-0 z-50`;
+            toast.innerHTML = `<span class="text-sm shrink-0">${icon}</span> <span class="leading-tight">${msg}</span>`;
             container.appendChild(toast);
             requestAnimationFrame(() => {
                 toast.classList.remove('translate-y-2', 'scale-95', 'opacity-0');
@@ -978,7 +993,7 @@
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2', 'scale-95');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 4500);
         }
 
         // POLLING AUTOMÁTICO PARA COCINA Y ADMIN
@@ -1047,12 +1062,13 @@
 
                 if (!res.ok) {
                     const data = await res.json();
-                    alert(data.mensaje || 'Error al actualizar estado');
+                    showNotification(data.mensaje || 'Error al actualizar estado', 'error');
                     return;
                 }
+                showNotification('Estado de comanda actualizado', 'success');
                 await fetchOrdenes();
             } catch (err) {
-                alert('Error de conexión');
+                showNotification('Error de conexión con el servidor', 'error');
             }
         }
 
@@ -1372,9 +1388,10 @@
                 if (!res.ok) throw new Error(data.mensaje || 'Error al guardar platillo');
 
                 closeModalPlatillo();
+                showNotification(id ? 'Platillo actualizado correctamente' : 'Platillo registrado correctamente', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1384,9 +1401,10 @@
                 const res = await fetch(`/api/platillos/${id}`, { method: 'DELETE', headers: apiHeaders() });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.mensaje || 'Error al eliminar');
+                showNotification('Platillo eliminado', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1465,9 +1483,10 @@
                 if (!res.ok) throw new Error(data.mensaje || 'Error al guardar categoría');
 
                 closeModalCategoria();
+                showNotification(id ? 'Categoría actualizada correctamente' : 'Categoría registrada correctamente', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1477,9 +1496,10 @@
                 const res = await fetch(`/api/categorias/${id}`, { method: 'DELETE', headers: apiHeaders() });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.mensaje || 'Error al eliminar');
+                showNotification('Categoría eliminada', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1554,9 +1574,10 @@
                 if (!res.ok) throw new Error(data.mensaje || 'Error al registrar mesa');
 
                 closeModalMesa();
+                showNotification('Mesa registrada correctamente', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1569,9 +1590,10 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.mensaje || 'Error al actualizar');
+                showNotification('Estado de mesa actualizado', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1581,9 +1603,10 @@
                 const res = await fetch(`/api/mesas/${id}`, { method: 'DELETE', headers: apiHeaders() });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.mensaje || 'Error al eliminar');
+                showNotification('Mesa eliminada', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1827,10 +1850,10 @@
                 if (!res.ok) throw new Error(data.mensaje || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Error al guardar usuario'));
 
                 closeModalUsuario();
-                showNotification(id ? 'Empleado actualizado correctamente' : 'Empleado registrado. Ya puede iniciar sesión en la app');
+                showNotification(id ? 'Empleado actualizado correctamente' : 'Empleado registrado. Ya puede iniciar sesión en la app', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
 
@@ -1843,10 +1866,10 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.mensaje || 'Error al eliminar usuario');
-                showNotification('Usuario eliminado correctamente');
+                showNotification('Usuario eliminado correctamente', 'success');
                 await loadAdminData();
             } catch (err) {
-                alert(err.message);
+                showNotification(err.message, 'error');
             }
         }
     </script>
