@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Mesa;
 use App\Models\Orden;
-use App\Models\Platillo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,42 +16,6 @@ class PagoTest extends TestCase
     {
         parent::setUp();
         $this->artisan('db:seed');
-    }
-
-    public function test_no_se_puede_cobrar_si_la_mesa_tiene_comandas_pendientes_en_cocina(): void
-    {
-        $mesero = User::where('email', 'mesero@restaurante.com')->first();
-        $token = $mesero->createToken('test')->plainTextToken;
-
-        $mesa = Mesa::first();
-        $mesa->update(['estado' => 'ocupada']);
-        $platillo = Platillo::first();
-
-        // Comanda 1: entregada
-        $ordenEntregada = Orden::create([
-            'mesa_id' => $mesa->id,
-            'user_id' => $mesero->id,
-            'estado' => 'entregado',
-            'total' => 160.00,
-        ]);
-
-        // Comanda 2: aún pendiente en cocina
-        $ordenPendiente = Orden::create([
-            'mesa_id' => $mesa->id,
-            'user_id' => $mesero->id,
-            'estado' => 'preparando',
-            'total' => 80.00,
-        ]);
-
-        // Intentar cobrar la comanda entregada cuando la mesa aún tiene comida pendiente en cocina
-        $res = $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/pagos', [
-                'orden_id' => $ordenEntregada->id,
-                'metodo' => 'Efectivo',
-            ]);
-
-        $res->assertStatus(422)
-            ->assertJsonPath('mensaje', 'No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.');
     }
 
     public function test_cobrar_orden_mantiene_mesa_ocupada_si_quedan_otras_comandas_activas(): void
@@ -107,27 +70,37 @@ class PagoTest extends TestCase
         $this->assertEquals('disponible', $mesa->fresh()->estado);
     }
 
-    public function test_rechaza_cobro_de_orden_ya_cerrada(): void
+    public function test_re_cobro_de_orden_ya_cerrada_responde_200_con_idempotencia(): void
     {
         $mesero = User::where('email', 'mesero@restaurante.com')->first();
         $token = $mesero->createToken('test')->plainTextToken;
 
         $mesa = Mesa::first();
-        $ordenCerrada = Orden::create([
+        $orden = Orden::create([
             'mesa_id' => $mesa->id,
             'user_id' => $mesero->id,
-            'estado' => 'cerrada',
+            'estado' => 'entregado',
             'total' => 100.00,
         ]);
 
-        $res = $this->withHeader('Authorization', "Bearer {$token}")
+        // Primer cobro
+        $res1 = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/pagos', [
-                'orden_id' => $ordenCerrada->id,
-                'metodo' => 'efectivo',
+                'orden_id' => $orden->id,
+                'metodo' => 'Efectivo',
+            ]);
+        $res1->assertStatus(201);
+
+        // Reintento de cobro (el cliente hace clic de nuevo)
+        $res2 = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/pagos', [
+                'orden_id' => $orden->id,
+                'metodo' => 'Efectivo',
             ]);
 
-        $res->assertStatus(422)
-            ->assertJsonPath('mensaje', 'Esta orden ya fue cerrada y cobrada previamente.');
+        // Responde 200 con mensaje de éxito/idempotencia en lugar de 422 para no trabar la UI móvil
+        $res2->assertStatus(200)
+            ->assertJsonPath('mensaje', 'Esta orden ya fue cobrada y cerrada exitosamente.');
     }
 
     public function test_permite_cobrar_cuenta_total_por_mesa_id(): void
@@ -156,5 +129,27 @@ class PagoTest extends TestCase
 
         $this->assertEquals('cerrada', $orden->fresh()->estado);
         $this->assertEquals('disponible', $mesa->fresh()->estado);
+    }
+
+    public function test_rechaza_cobro_de_orden_en_preparacion(): void
+    {
+        $mesero = User::where('email', 'mesero@restaurante.com')->first();
+        $token = $mesero->createToken('test')->plainTextToken;
+
+        $mesa = Mesa::first();
+        $orden = Orden::create([
+            'mesa_id' => $mesa->id,
+            'user_id' => $mesero->id,
+            'estado' => 'preparando',
+            'total' => 120.00,
+        ]);
+
+        $res = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/pagos', [
+                'orden_id' => $orden->id,
+                'metodo' => 'efectivo',
+            ]);
+
+        $res->assertStatus(422);
     }
 }

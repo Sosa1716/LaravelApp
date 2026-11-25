@@ -15,6 +15,7 @@ class PagoController extends Controller
     {
         $pagos = Pago::with([
             'orden.mesa',
+            'orden.user',
         ])
             ->latest()
             ->get();
@@ -24,80 +25,24 @@ class PagoController extends Controller
 
     public function store(Request $request)
     {
-        // Normalizar método de pago (insensible a mayúsculas y espacios)
-        $metodoInput = strtolower(trim((string) $request->input('metodo', 'efectivo')));
-        if (! in_array($metodoInput, ['efectivo', 'tarjeta'])) {
-            return response()->json([
-                'mensaje' => 'El método de pago debe ser efectivo o tarjeta.',
-                'message' => 'El método de pago debe ser efectivo o tarjeta.',
-                'errors' => ['metodo' => ['El método de pago debe ser efectivo o tarjeta.']],
-            ], 422);
+        // 1. Normalizar método de pago (insensible a mayúsculas, espacios y variantes)
+        $metodoRaw = strtolower(trim((string) $request->input('metodo', 'efectivo')));
+        $metodo = in_array($metodoRaw, ['tarjeta', 'card', 'credit', 'debit']) ? 'tarjeta' : 'efectivo';
+
+        // 2. Extraer identificadores de orden o mesa de forma flexible
+        $ordenId = $request->input('orden_id');
+        if (is_array($ordenId)) {
+            $ordenId = reset($ordenId);
+        }
+        $mesaId = $request->input('mesa_id');
+
+        // Caso A: Si se envió únicamente mesa_id (o cobro de cuenta total de la mesa)
+        if (empty($ordenId) && ! empty($mesaId)) {
+            return $this->cobrarPorMesa($mesaId, $metodo);
         }
 
-        // Caso A: Cobro por mesa_id (cuando la app envía la mesa completa)
-        if (! $request->filled('orden_id') && $request->filled('mesa_id')) {
-            $mesaId = $request->input('mesa_id');
-            $mesa = Mesa::find($mesaId);
-
-            if (! $mesa) {
-                return response()->json([
-                    'mensaje' => 'La mesa indicada no existe.',
-                    'message' => 'La mesa indicada no existe.',
-                    'errors' => ['mesa_id' => ['La mesa indicada no existe.']],
-                ], 422);
-            }
-
-            // Verificar si la mesa ya está liberada y sin órdenes activas
-            $ordenesMesa = Orden::where('mesa_id', $mesaId)
-                ->whereIn('estado', ['pendiente', 'preparando', 'listo', 'entregado'])
-                ->get();
-
-            if ($ordenesMesa->isEmpty()) {
-                return response()->json([
-                    'mensaje' => 'Esta mesa ya fue cerrada o no tiene comandas pendientes de cobro.',
-                    'message' => 'Esta mesa ya fue cerrada o no tiene comandas pendientes de cobro.',
-                    'errors' => ['mesa_id' => ['Esta mesa ya fue cerrada o no tiene comandas pendientes de cobro.']],
-                ], 422);
-            }
-
-            // Verificar si hay comandas pendientes en cocina
-            $pendientesCocina = $ordenesMesa->whereIn('estado', ['pendiente', 'preparando', 'listo']);
-            if ($pendientesCocina->isNotEmpty()) {
-                return response()->json([
-                    'mensaje' => 'No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.',
-                    'message' => 'No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.',
-                    'errors' => ['mesa_id' => ['No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.']],
-                ], 422);
-            }
-
-            return DB::transaction(function () use ($ordenesMesa, $mesa, $metodoInput) {
-                $pagos = [];
-                foreach ($ordenesMesa as $o) {
-                    $p = Pago::create([
-                        'orden_id' => $o->id,
-                        'metodo' => $metodoInput,
-                        'monto' => $o->total,
-                        'estado' => 'pagado',
-                    ]);
-                    $o->update(['estado' => 'cerrada']);
-                    $pagos[] = $p;
-                }
-
-                $mesa->update(['estado' => 'disponible']);
-
-                $ultimoPago = end($pagos);
-
-                return response()->json([
-                    'mensaje' => 'Pago registrado correctamente',
-                    'message' => 'Pago registrado correctamente',
-                    'pagos' => $pagos,
-                    'pago' => $ultimoPago ? $ultimoPago->load('orden.mesa') : null,
-                ], 201);
-            });
-        }
-
-        // Caso B: Cobro por orden_id
-        if (! $request->filled('orden_id')) {
+        // Si no se proporcionó ni orden_id ni mesa_id
+        if (empty($ordenId) && empty($mesaId)) {
             return response()->json([
                 'mensaje' => 'Debes indicar el número de orden (orden_id) o mesa (mesa_id).',
                 'message' => 'Debes indicar el número de orden (orden_id) o mesa (mesa_id).',
@@ -105,9 +50,13 @@ class PagoController extends Controller
             ], 422);
         }
 
-        $ordenId = $request->input('orden_id');
+        // Caso B: Cobro por orden_id específico
+        return $this->cobrarPorOrden($ordenId, $metodo);
+    }
 
-        return DB::transaction(function () use ($ordenId, $metodoInput) {
+    private function cobrarPorOrden($ordenId, string $metodo)
+    {
+        return DB::transaction(function () use ($ordenId, $metodo) {
             $orden = Orden::lockForUpdate()->find($ordenId);
 
             if (! $orden) {
@@ -118,80 +67,152 @@ class PagoController extends Controller
                 ], 422);
             }
 
-            // 1. Si la orden ya está cerrada
-            if ($orden->estado === 'cerrada') {
-                return response()->json([
-                    'mensaje' => 'Esta orden ya fue cerrada y cobrada previamente.',
-                    'message' => 'Esta orden ya fue cerrada y cobrada previamente.',
-                    'errors' => ['orden_id' => ['Esta orden ya fue cerrada y cobrada previamente.']],
-                ], 422);
-            }
-
-            // 2. Si la orden no ha sido entregada aún
-            if ($orden->estado !== 'entregado') {
-                return response()->json([
-                    'mensaje' => 'La orden debe estar en estado entregada antes de cobrarla.',
-                    'message' => 'La orden debe estar en estado entregada antes de cobrarla.',
-                    'errors' => ['orden_id' => ['La orden debe estar entregada antes de realizar el pago.']],
-                ], 422);
-            }
-
-            // 3. REGLA CLAVE: Verificar si la mesa tiene comandas pendientes en cocina
-            $comandasPendientesEnCocina = Orden::where('mesa_id', $orden->mesa_id)
-                ->where('id', '!=', $orden->id)
-                ->whereIn('estado', ['pendiente', 'preparando', 'listo'])
-                ->exists();
-
-            if ($comandasPendientesEnCocina) {
-                return response()->json([
-                    'mensaje' => 'No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.',
-                    'message' => 'No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.',
-                    'errors' => ['orden_id' => ['No se puede cobrar la mesa porque aún tiene comandas pendientes o en preparación en cocina.']],
-                ], 422);
-            }
-
-            // 4. Verificar si ya tiene un pago registrado
-            $yaPagada = Pago::where('orden_id', $orden->id)
+            // IDEMPOTENCIA Y PROTECCIÓN DE MESAS CERRADAS:
+            // Si la orden ya está cerrada o ya tiene un pago registrado:
+            $pagoExistente = Pago::where('orden_id', $orden->id)
                 ->where('estado', 'pagado')
-                ->exists();
+                ->latest()
+                ->first();
 
-            if ($yaPagada) {
+            if ($pagoExistente || $orden->estado === 'cerrada') {
+                // Asegurar que si la mesa no tiene otras órdenes activas, quede disponible
+                $quedanActivas = Orden::where('mesa_id', $orden->mesa_id)
+                    ->where('id', '!=', $orden->id)
+                    ->whereIn('estado', ['pendiente', 'preparando', 'listo', 'entregado'])
+                    ->exists();
+
+                if (! $quedanActivas && $orden->mesa) {
+                    $orden->mesa()->update(['estado' => 'disponible']);
+                }
+
+                // Devolver HTTP 200 en lugar de 422 para evitar que la app móvil se trabe en bucle de error
                 return response()->json([
-                    'mensaje' => 'Esta orden ya cuenta con un pago registrado.',
-                    'message' => 'Esta orden ya cuenta con un pago registrado.',
-                    'errors' => ['orden_id' => ['Esta orden ya fue pagada.']],
+                    'mensaje' => 'Esta orden ya fue cobrada y cerrada exitosamente.',
+                    'message' => 'Esta orden ya fue cobrada y cerrada exitosamente.',
+                    'pago' => $pagoExistente ? $pagoExistente->load('orden.mesa') : null,
+                ], 200);
+            }
+
+            // Permitir cobro si la comanda está en 'entregado' o 'listo'
+            if (! in_array($orden->estado, ['entregado', 'listo'])) {
+                return response()->json([
+                    'mensaje' => "La comanda #{$orden->id} está en preparación ({$orden->estado}). Debe estar lista o entregada para cobrar.",
+                    'message' => "La comanda #{$orden->id} está en preparación ({$orden->estado}). Debe estar lista o entregada para cobrar.",
+                    'errors' => ['orden_id' => ['La comanda debe estar lista o entregada antes de realizar el pago.']],
                 ], 422);
             }
 
-            // 5. Crear el pago
+            // Registrar el pago
             $pago = Pago::create([
                 'orden_id' => $orden->id,
-                'metodo' => $metodoInput,
+                'metodo' => $metodo,
                 'monto' => $orden->total,
                 'estado' => 'pagado',
             ]);
 
-            // 6. Cerrar la orden
+            // Marcar comanda como cerrada
             $orden->update([
                 'estado' => 'cerrada',
             ]);
 
-            // 7. CORRECCIÓN DEL BUG: Solo marcar la mesa como 'disponible' si NO le quedan más órdenes activas
-            $ordenesActivasRestantes = Orden::where('mesa_id', $orden->mesa_id)
+            // RESOLUCIÓN DEL BUG DE COBROS PENDIENTES EN MESAS:
+            // Comprobar si en la mesa aún quedan otras órdenes activas (entregadas, listas o en cocina)
+            $quedanOrdenesActivas = Orden::where('mesa_id', $orden->mesa_id)
                 ->where('id', '!=', $orden->id)
                 ->whereIn('estado', ['pendiente', 'preparando', 'listo', 'entregado'])
                 ->exists();
 
-            if (! $ordenesActivasRestantes) {
-                $orden->mesa()->update([
-                    'estado' => 'disponible',
-                ]);
+            if ($quedanOrdenesActivas) {
+                // Aún hay comandas pendientes de esa mesa: la mesa PERMANECE OCUPADA
+                $orden->mesa()->update(['estado' => 'ocupada']);
+            } else {
+                // No quedan más comandas activas en la mesa: se libera a DISPONIBLE
+                $orden->mesa()->update(['estado' => 'disponible']);
             }
 
             return response()->json([
                 'mensaje' => 'Pago registrado correctamente',
                 'message' => 'Pago registrado correctamente',
                 'pago' => $pago->load('orden.mesa'),
+            ], 201);
+        });
+    }
+
+    private function cobrarPorMesa($mesaId, string $metodo)
+    {
+        $mesa = Mesa::find($mesaId);
+
+        if (! $mesa) {
+            return response()->json([
+                'mensaje' => 'La mesa indicada no existe.',
+                'message' => 'La mesa indicada no existe.',
+                'errors' => ['mesa_id' => ['La mesa indicada no existe.']],
+            ], 422);
+        }
+
+        // Buscar todas las órdenes de esa mesa que estén listas o entregadas (pendientes de cobro)
+        $ordenesPorCobrar = Orden::where('mesa_id', $mesa->id)
+            ->whereIn('estado', ['entregado', 'listo'])
+            ->get();
+
+        if ($ordenesPorCobrar->isEmpty()) {
+            // Verificar si hay órdenes aún en cocina
+            $enCocina = Orden::where('mesa_id', $mesa->id)
+                ->whereIn('estado', ['pendiente', 'preparando'])
+                ->exists();
+
+            if ($enCocina) {
+                return response()->json([
+                    'mensaje' => 'La mesa aún tiene órdenes en preparación en cocina. Deben estar listas antes de cobrar.',
+                    'message' => 'La mesa aún tiene órdenes en preparación en cocina. Deben estar listas antes de cobrar.',
+                    'errors' => ['mesa_id' => ['La mesa aún tiene órdenes en preparación en cocina.']],
+                ], 422);
+            }
+
+            // Si no tiene órdenes activas, asegurarse de que la mesa esté disponible
+            $mesa->update(['estado' => 'disponible']);
+
+            return response()->json([
+                'mensaje' => 'La mesa no tiene cobros pendientes y se encuentra cerrada.',
+                'message' => 'La mesa no tiene cobros pendientes y se encuentra cerrada.',
+                'pago' => null,
+            ], 200);
+        }
+
+        return DB::transaction(function () use ($ordenesPorCobrar, $mesa, $metodo) {
+            $pagos = [];
+            foreach ($ordenesPorCobrar as $o) {
+                $yaPagada = Pago::where('orden_id', $o->id)->where('estado', 'pagado')->exists();
+                if (! $yaPagada) {
+                    $p = Pago::create([
+                        'orden_id' => $o->id,
+                        'metodo' => $metodo,
+                        'monto' => $o->total,
+                        'estado' => 'pagado',
+                    ]);
+                    $pagos[] = $p;
+                }
+                $o->update(['estado' => 'cerrada']);
+            }
+
+            // Comprobar si aún quedan órdenes pendientes en cocina
+            $quedanEnCocina = Orden::where('mesa_id', $mesa->id)
+                ->whereIn('estado', ['pendiente', 'preparando'])
+                ->exists();
+
+            if (! $quedanEnCocina) {
+                $mesa->update(['estado' => 'disponible']);
+            } else {
+                $mesa->update(['estado' => 'ocupada']);
+            }
+
+            $ultimoPago = end($pagos);
+
+            return response()->json([
+                'mensaje' => 'Pago registrado correctamente',
+                'message' => 'Pago registrado correctamente',
+                'pagos' => $pagos,
+                'pago' => $ultimoPago ? $ultimoPago->load('orden.mesa') : null,
             ], 201);
         });
     }
