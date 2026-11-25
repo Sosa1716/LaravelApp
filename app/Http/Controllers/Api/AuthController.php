@@ -14,16 +14,16 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|string'
+            'password' => 'required|string',
         ]);
 
         $user = User::with('role')
             ->where('email', $request->email)
             ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Las credenciales proporcionadas son incorrectas.']
+                'email' => ['Las credenciales proporcionadas son incorrectas.'],
             ]);
         }
 
@@ -38,8 +38,8 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'nombre' => $user->name,
                 'email' => $user->email,
-                'rol' => $user->role?->nombre
-            ]
+                'rol' => $user->role?->nombre,
+            ],
         ]);
     }
 
@@ -55,7 +55,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'mensaje' => 'Sesión cerrada correctamente'
+            'mensaje' => 'Sesión cerrada correctamente',
         ]);
     }
 }

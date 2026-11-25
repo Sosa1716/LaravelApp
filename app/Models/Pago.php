@@ -10,7 +10,7 @@ class Pago extends Model
         'orden_id',
         'metodo',
         'monto',
-        'estado'
+        'estado',
     ];
 
     public function orden()

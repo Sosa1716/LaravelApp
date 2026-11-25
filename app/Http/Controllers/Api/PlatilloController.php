@@ -23,14 +23,14 @@ class PlatilloController extends Controller
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0',
             'imagen' => 'nullable|string',
-            'disponible' => 'boolean'
+            'disponible' => 'boolean',
         ]);
 
         $platillo = Platillo::create($request->all());
 
         return response()->json([
             'mensaje' => 'Platillo registrado correctamente',
-            'platillo' => $platillo
+            'platillo' => $platillo,
         ], 201);
     }
 
@@ -38,9 +38,9 @@ class PlatilloController extends Controller
     {
         $platillo = Platillo::with('categoria')->find($id);
 
-        if (!$platillo) {
+        if (! $platillo) {
             return response()->json([
-                'mensaje' => 'Platillo no encontrado'
+                'mensaje' => 'Platillo no encontrado',
             ], 404);
         }
 
@@ -51,9 +51,9 @@ class PlatilloController extends Controller
     {
         $platillo = Platillo::find($id);
 
-        if (!$platillo) {
+        if (! $platillo) {
             return response()->json([
-                'mensaje' => 'Platillo no encontrado'
+                'mensaje' => 'Platillo no encontrado',
             ], 404);
         }
 
@@ -63,14 +63,14 @@ class PlatilloController extends Controller
             'descripcion' => 'nullable|string',
             'precio' => 'sometimes|required|numeric|min:0',
             'imagen' => 'nullable|string',
-            'disponible' => 'boolean'
+            'disponible' => 'boolean',
         ]);
 
         $platillo->update($request->all());
 
         return response()->json([
             'mensaje' => 'Platillo actualizado correctamente',
-            'platillo' => $platillo
+            'platillo' => $platillo,
         ]);
     }
 
@@ -78,16 +78,16 @@ class PlatilloController extends Controller
     {
         $platillo = Platillo::find($id);
 
-        if (!$platillo) {
+        if (! $platillo) {
             return response()->json([
-                'mensaje' => 'Platillo no encontrado'
+                'mensaje' => 'Platillo no encontrado',
             ], 404);
         }
 
         $platillo->delete();
 
         return response()->json([
-            'mensaje' => 'Platillo eliminado correctamente'
+            'mensaje' => 'Platillo eliminado correctamente',
         ]);
     }
 }

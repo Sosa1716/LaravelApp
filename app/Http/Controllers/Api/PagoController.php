@@ -14,10 +14,10 @@ class PagoController extends Controller
     public function index()
     {
         $pagos = Pago::with([
-            'orden.mesa'
+            'orden.mesa',
         ])
-        ->latest()
-        ->get();
+            ->latest()
+            ->get();
 
         return response()->json($pagos);
     }
@@ -26,7 +26,7 @@ class PagoController extends Controller
     {
         $datos = $request->validate([
             'orden_id' => 'required|exists:ordenes,id',
-            'metodo' => 'required|in:efectivo,tarjeta'
+            'metodo' => 'required|in:efectivo,tarjeta',
         ]);
 
         $pago = DB::transaction(function () use ($datos) {
@@ -37,8 +37,8 @@ class PagoController extends Controller
             if ($orden->estado !== 'entregado') {
                 throw ValidationException::withMessages([
                     'orden_id' => [
-                        'La orden debe estar entregada antes de realizar el pago.'
-                    ]
+                        'La orden debe estar entregada antes de realizar el pago.',
+                    ],
                 ]);
             }
 
@@ -49,8 +49,8 @@ class PagoController extends Controller
             if ($yaPagada) {
                 throw ValidationException::withMessages([
                     'orden_id' => [
-                        'Esta orden ya fue pagada.'
-                    ]
+                        'Esta orden ya fue pagada.',
+                    ],
                 ]);
             }
 
@@ -61,15 +61,15 @@ class PagoController extends Controller
                 // El monto viene del servidor, no del cliente
                 'monto' => $orden->total,
 
-                'estado' => 'pagado'
+                'estado' => 'pagado',
             ]);
 
             $orden->update([
-                'estado' => 'cerrada'
+                'estado' => 'cerrada',
             ]);
 
             $orden->mesa()->update([
-                'estado' => 'disponible'
+                'estado' => 'disponible',
             ]);
 
             return $pago;
@@ -77,7 +77,7 @@ class PagoController extends Controller
 
         return response()->json([
             'mensaje' => 'Pago registrado correctamente',
-            'pago' => $pago->load('orden.mesa')
+            'pago' => $pago->load('orden.mesa'),
         ], 201);
     }
 }

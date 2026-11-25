@@ -20,7 +20,7 @@ return new class extends Migration
                 'disponible',
                 'ocupada',
                 'reservada',
-                'fuera_servicio'
+                'fuera_servicio',
             ])->default('disponible');
 
             $table->timestamps();

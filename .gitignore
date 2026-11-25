@@ -22,3 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Herramientas de agentes / artefactos locales (no forman parte de la app)
+/.agents
+/.codex-build
+/skills-lock.json
