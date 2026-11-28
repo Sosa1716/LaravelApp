@@ -14,6 +14,7 @@ class OrdenDetalle extends Model
         'cantidad',
         'precio',
         'notas',
+        'estado',
     ];
 
     public function orden()
