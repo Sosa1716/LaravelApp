@@ -345,11 +345,7 @@
                     class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
                     👥 Usuarios & Meseros
                 </button>
-                <button onclick="switchAdminTab('reportes')" id="tab-btn-reportes"
-                    class="admin-tab-btn px-4 py-2.5 text-slate-400 hover:text-white transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5">
-                    📈 Reportes
-                    <span class="text-[9px] bg-[#EBD140]/25 text-[#EBD140] px-1.5 py-0.5 rounded border border-[#EBD140]/40 font-bold">Pronto</span>
-                </button>
+               
             </div>
         </header>
 
@@ -1145,9 +1141,13 @@
                 }
 
                 (orden.detalles || []).forEach(d => {
+                    const effectiveEstado = (includeDelivered || orden.estado === 'entregado')
+                        ? 'entregado'
+                        : (d.estado || (orden.estado === 'listo' ? 'listo' : (orden.estado === 'preparando' ? 'preparando' : 'pendiente')));
+
                     group.detalles.push({
                         ...d,
-                        estado: d.estado || (orden.estado === 'entregado' ? 'entregado' : (orden.estado === 'listo' ? 'listo' : (orden.estado === 'preparando' ? 'preparando' : 'pendiente'))),
+                        estado: effectiveEstado,
                         orden_id: orden.id,
                     });
                 });
