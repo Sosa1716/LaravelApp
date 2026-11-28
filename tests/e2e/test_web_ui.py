@@ -91,7 +91,9 @@ def test_04_orden_de_app_movil_aparece_en_cocina_y_se_prepara(ui):
     r.raise_for_status()
     api.headers["Authorization"] = f"Bearer {r.json()['token']}"
 
-    mesa = _items(api.get(f"{BASE_URL}/api/mesas", timeout=60).json(), "mesas")[0]
+    # Mesa con el id más alto: los datos de prueba usan las primeras mesas,
+    # así la comanda queda sola en su tarjeta de mesa.
+    mesa = max(_items(api.get(f"{BASE_URL}/api/mesas", timeout=60).json(), "mesas"), key=lambda m: m["id"])
     platillos = _items(api.get(f"{BASE_URL}/api/platillos", timeout=60).json(), "platillos")
     platillo = next(p for p in platillos if p.get("disponible"))
     r = api.post(f"{BASE_URL}/api/ordenes", timeout=60, json={
@@ -99,32 +101,37 @@ def test_04_orden_de_app_movil_aparece_en_cocina_y_se_prepara(ui):
         "items": [{"platillo_id": platillo["id"], "cantidad": 2, "notas": "Enviada por prueba Selenium (app móvil)"}],
     })
     assert r.status_code == 201, r.text
-    orden_id = r.json()["orden"]["id"]
+    orden = r.json()["orden"]
+    orden_id, detalle_id = orden["id"], orden["detalles"][0]["id"]
 
-    # 4.2 La cocina la ve aparecer en su pantalla
+    # 4.2 La cocina la ve aparecer en su pantalla (agrupada por mesa)
     ui.login_as("cocina")
     ui.visible(By.ID, "view-cocina")
-    preparar = f"//button[contains(@onclick, \"updateEstado({orden_id}, 'preparando')\")]"
-    listo = f"//button[contains(@onclick, \"updateEstado({orden_id}, 'listo')\")]"
+    preparar = f"//button[contains(@onclick, \"updateDetalleEstado({detalle_id}, 'preparando')\")]"
+    listo = f"//button[contains(@onclick, \"updateDetalleEstado({detalle_id}, 'listo')\")]"
     boton = ui.clickable(By.XPATH, preparar)
     ui.d.execute_script("arguments[0].scrollIntoView({block: 'center'});", boton)
-    ui.shot(f"orden {orden_id} pendiente recibida desde movil")
-    listas_antes = _int(ui.d.find_element(By.ID, "badge-count-listo").text)
+    ui.shot(f"comanda {orden_id} de la mesa {mesa['numero']} recibida desde movil")
 
-    # 4.3 Iniciar preparación
+    # 4.3 Cocina inicia la preparación del platillo
     boton.click()
     boton = ui.clickable(By.XPATH, listo)
     ui.d.execute_script("arguments[0].scrollIntoView({block: 'center'});", boton)
-    ui.shot(f"orden {orden_id} en preparacion")
+    ui.shot(f"platillo de la comanda {orden_id} en preparacion")
 
-    # 4.4 Marcar como lista
+    # 4.4 Cocina lo marca como listo
     boton.click()
     ui.wait.until(EC.invisibility_of_element_located((By.XPATH, listo)))
-    ui.wait.until(lambda d: _int(d.find_element(By.ID, "badge-count-listo").text) == listas_antes + 1)
-    # Volver arriba: la cabecera fija taparía los filtros si la página quedó desplazada.
-    ui.d.execute_script("window.scrollTo(0, 0);")
-    ui.clickable(By.CSS_SELECTOR, "button[data-filter='listo']").click()
-    ui.shot(f"orden {orden_id} lista para servir")
+    ui.wait.until(EC.invisibility_of_element_located((By.XPATH, preparar)))
+    tarjeta = ui.visible(By.XPATH, f"//div[@id='ordenes-grid']/div[.//*[contains(., '#{orden_id}')]]")
+    # Encuadrar la tarjeta completa de la mesa debajo de la cabecera fija.
+    ui.d.execute_script("arguments[0].scrollIntoView({block: 'start'}); window.scrollBy(0, -80);", tarjeta)
+    ui.shot(f"platillo de la comanda {orden_id} listo")
+
+    # 4.5 El backend refleja el cambio hecho en la interfaz
+    estado = api.get(f"{BASE_URL}/api/ordenes/{orden_id}", timeout=60).json()
+    estado = estado.get("orden", estado)
+    assert estado["detalles"][0]["estado"] == "listo", estado
 
 
 # ---------------------------------------------------------------------------
