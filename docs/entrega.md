@@ -98,6 +98,9 @@ y el **release v1.0.0** adjunta automáticamente los artefactos.
   - `HealthTest`: `/up`, `/api/version`, login inválido sin error 500.
   - `RoleMiddlewareTest` (unitaria): 401 / 403 / acceso permitido.
 - Resultados: artefactos `test-results-*` y `coverage-report`, y `test-results.zip` en el release.
+- **Pruebas E2E de la interfaz con Selenium** (`tests/e2e/`, desde v1.1.0): 7 pruebas en Chrome contra staging
+  (login inválido, login Cocina, login Admin con métricas, orden de la app móvil preparada en Cocina, filtros por estado,
+  alta de platillo, cierre de sesión), con capturas en el artefacto `e2e-report`.
 - **Pruebas funcionales sobre el ambiente desplegado** (smoke test post-deploy en staging):
   ```
   OK  GET /up                                   -> 200

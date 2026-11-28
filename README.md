@@ -126,6 +126,19 @@ DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=55432 DB_DATABASE=testing \
 DB_USERNAME=postgres DB_PASSWORD=secret php artisan test
 ```
 
+### Pruebas end-to-end (Selenium)
+
+Pruebas de la interfaz web (Cocina y Administración) en `tests/e2e/`, con Python + Selenium + pytest:
+
+```bash
+pip install -r tests/e2e/requirements.txt
+docker compose up -d                      # app local con datos de demostración
+cd tests/e2e && E2E_BASE_URL=http://localhost:8080 python -m pytest
+```
+
+Generan `reports/e2e/junit-e2e.xml` y capturas en `reports/e2e/screenshots/`. `E2E_HEADLESS=0` muestra el navegador.
+En el pipeline corren contra staging después de cada deploy, y el release depende de ellas.
+
 ## Flujo de ramas
 
 ```mermaid

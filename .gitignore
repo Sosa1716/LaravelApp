@@ -27,3 +27,8 @@ Thumbs.db
 /.agents
 /.codex-build
 /skills-lock.json
+
+# Reportes generados por las pruebas (E2E, cobertura)
+/reports
+__pycache__/
+.pytest_cache/

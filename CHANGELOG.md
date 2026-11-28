@@ -4,6 +4,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 [Versionado Semántico](https://semver.org/lang/es/).
 El pipeline toma la sección de la versión correspondiente como notas del GitHub Release.
 
+## [1.1.0]
+
+### Añadido
+- Pruebas end-to-end de la interfaz web con **Selenium** (Python + pytest, Chrome headless) en `tests/e2e/`:
+  login inválido, login de Cocina, login de Administrador con métricas, orden enviada desde la app móvil
+  que aparece y se prepara en Cocina, filtros de Cocina por estado, alta de platillo desde Administración
+  y cierre de sesión. Cada prueba guarda capturas de pantalla como evidencia.
+- Job `e2e` en el pipeline: corre contra staging después del deploy; el release depende de él.
+- El release adjunta `e2e-report.zip` (JUnit + capturas).
+
 ## [1.0.0]
 
 Primera versión entregada con flujo DevOps completo.
