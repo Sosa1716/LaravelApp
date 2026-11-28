@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\MesaController;
+use App\Http\Controllers\Api\NotificacionController;
 use App\Http\Controllers\Api\OrdenController;
 use App\Http\Controllers\Api\PagoController;
 use App\Http\Controllers\Api\PlatilloController;
@@ -69,6 +70,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/ordenes/{orden}/estado', [OrdenController::class, 'updateEstado'])
         ->middleware('role:Administrador,Mesero,Cocina');
+
+    Route::patch('/orden-detalles/{ordenDetalle}/estado', [OrdenController::class, 'updateDetalleEstado'])
+        ->middleware('role:Administrador,Cocina');
+
+    Route::post('/mesas/{mesa}/entregar', [OrdenController::class, 'entregarMesa'])
+        ->middleware('role:Administrador,Cocina');
+
+    // NOTIFICACIONES
+    Route::get('/notificaciones', [NotificacionController::class, 'index']);
+    Route::patch('/notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
+    Route::post('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
 
     // PAGOS
     Route::get('/pagos', [PagoController::class, 'index'])

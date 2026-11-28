@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Orden;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -24,6 +24,7 @@ class UserController extends Controller
     public function roles()
     {
         $roles = Role::all();
+
         return response()->json($roles);
     }
 
@@ -53,7 +54,7 @@ class UserController extends Controller
 
         return response()->json([
             'mensaje' => 'Usuario registrado correctamente',
-            'usuario' => $usuario->load('role')
+            'usuario' => $usuario->load('role'),
         ], 201);
     }
 
@@ -98,7 +99,7 @@ class UserController extends Controller
 
         return response()->json([
             'mensaje' => 'Usuario actualizado correctamente',
-            'usuario' => $usuario->load('role')
+            'usuario' => $usuario->load('role'),
         ]);
     }
 
@@ -106,13 +107,13 @@ class UserController extends Controller
     {
         if ($usuario->id === $request->user()->id) {
             return response()->json([
-                'mensaje' => 'No puedes eliminar tu propia cuenta en sesión.'
+                'mensaje' => 'No puedes eliminar tu propia cuenta en sesión.',
             ], 422);
         }
 
         if (Orden::where('user_id', $usuario->id)->exists()) {
             return response()->json([
-                'mensaje' => 'No se puede eliminar este usuario porque tiene comandas u órdenes registradas en el historial. Puedes editar sus datos o contraseña.'
+                'mensaje' => 'No se puede eliminar este usuario porque tiene comandas u órdenes registradas en el historial. Puedes editar sus datos o contraseña.',
             ], 422);
         }
 
@@ -120,8 +121,7 @@ class UserController extends Controller
         $usuario->delete();
 
         return response()->json([
-            'mensaje' => 'Usuario eliminado correctamente'
+            'mensaje' => 'Usuario eliminado correctamente',
         ]);
     }
 }
-

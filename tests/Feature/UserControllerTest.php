@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Mesa;
-use App\Models\Platillo;
 use App\Models\Orden;
+use App\Models\Platillo;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class UserControllerTest extends TestCase
 {
@@ -32,6 +32,7 @@ class UserControllerTest extends TestCase
         $response->assertStatus(403);
 
         // 2. Un administrador sí puede consultar
+        $this->app['auth']->forgetGuards();
         $admin = User::where('email', 'admin@restaurante.com')->first();
         $adminToken = $admin->createToken('test')->plainTextToken;
 
@@ -40,7 +41,7 @@ class UserControllerTest extends TestCase
 
         $responseAdmin->assertStatus(200)
             ->assertJsonStructure([
-                '*' => ['id', 'name', 'email', 'role_id', 'role']
+                '*' => ['id', 'name', 'email', 'role_id', 'role'],
             ]);
     }
 
@@ -81,6 +82,7 @@ class UserControllerTest extends TestCase
         $tokenMesero = $loginResponse->json('token');
 
         // 3. El nuevo mesero registra una comanda desde la app
+        $this->app['auth']->forgetGuards();
         $mesa = Mesa::where('estado', 'disponible')->first();
         $platillo = Platillo::where('disponible', true)->first();
 
@@ -91,15 +93,16 @@ class UserControllerTest extends TestCase
                     [
                         'platillo_id' => $platillo->id,
                         'cantidad' => 1,
-                        'notas' => 'Atendido por Carlos'
-                    ]
-                ]
+                        'notas' => 'Atendido por Carlos',
+                    ],
+                ],
             ]);
 
         $ordenResponse->assertStatus(201);
         $ordenId = $ordenResponse->json('orden.id');
 
         // 4. Se comprueba que la orden registra y muestra que el mesero Carlos la atendió
+        $this->app['auth']->forgetGuards();
         $consultaResponse = $this->withHeader('Authorization', "Bearer {$adminToken}")
             ->getJson('/api/ordenes');
 
@@ -134,4 +137,3 @@ class UserControllerTest extends TestCase
             ->assertJsonPath('mensaje', 'No puedes eliminar tu propia cuenta en sesión.');
     }
 }
-

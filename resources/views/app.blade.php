@@ -258,6 +258,12 @@
                     <span>Listas ✓</span>
                     <span id="badge-count-listo" class="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-bold">0</span>
                 </button>
+                <button onclick="setFilter('entregado')" data-filter="entregado"
+                    class="filter-btn px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-white text-[#2E3C43] hover:bg-slate-50 border border-slate-200 whitespace-nowrap">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0 shadow-sm"></span>
+                    <span>Entregadas</span>
+                    <span id="badge-count-entregado" class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-bold">0</span>
+                </button>
             </div>
 
             <!-- Grilla de Órdenes Cocina -->
@@ -800,6 +806,87 @@
     </div>
 
 
+    <!-- ================= VISTA DE MESERO ================= -->
+    <div id="view-mesero" class="hidden min-h-screen flex flex-col bg-slate-100">
+        <header class="apple-glass-nav text-white sticky top-0 z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <img src="/logo.png" alt="Antojería Pingüin"
+                         class="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-[#EBD140] shrink-0"
+                         onerror="this.src='/logo.jpg';">
+                    <div>
+                        <h1 class="text-base font-extrabold leading-tight text-white tracking-tight flex items-center gap-2">
+                            Panel de Mesero
+                            <span id="mesero-unread-badge" class="hidden text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EBD140] text-[#2E3C43] shadow-sm">0 nuevas</span>
+                        </h1>
+                        <p class="text-[11px] text-slate-300 leading-none mt-0.5 font-medium">Notificaciones de cocina y estado de entrega por mesa</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="fetchMeseroData()" class="btn-action px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl border border-white/15">
+                        🔄 Actualizar
+                    </button>
+                    <span class="text-xs text-white/90 font-medium px-2.5 py-1 bg-white/10 rounded-xl border border-white/10" id="user-display-mesero">
+                        Mesero
+                    </span>
+                    <button onclick="handleLogout()" class="btn-action px-3 py-1.5 bg-[#C24840] hover:bg-[#a83c35] text-white text-xs font-bold rounded-xl shadow-sm">
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
+            <!-- Notificaciones de Cocina -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-sm font-extrabold text-[#2E3C43] flex items-center gap-2">
+                            <span>🔔</span> Notificaciones de Entrega
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Avisos de cocina cuando todos los platillos de una mesa están listos</p>
+                    </div>
+                    <button onclick="marcarTodasNotificacionesLeidas()" class="btn-action px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#2E3C43] text-xs font-bold rounded-xl">
+                        ✓ Marcar todas como leídas
+                    </button>
+                </div>
+                <div id="mesero-notificaciones-list" class="space-y-2.5"></div>
+            </section>
+
+            <!-- Estado de mesas / órdenes del mesero -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <h2 class="text-sm font-extrabold text-[#2E3C43] mb-4 flex items-center gap-2">
+                    <span>🍽️</span> Estado de Comandas por Mesa
+                </h2>
+                <div id="mesero-ordenes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Confirmar Entrega de Mesa -->
+    <div id="modal-confirmar-entrega" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-emerald-50/70">
+                <h3 class="font-extrabold text-[#2E3C43] text-sm flex items-center gap-2">
+                    <span>🍽️</span> Confirmar Entrega de Mesa
+                </h3>
+                <button onclick="closeConfirmarEntrega()" class="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 text-lg leading-none">&times;</button>
+            </div>
+            <div class="p-5 space-y-4 text-xs">
+                <p id="modal-entrega-mensaje" class="text-slate-700 leading-relaxed font-medium"></p>
+                <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] font-semibold">
+                    Se enviará una notificación al mesero responsable indicando que todos los platillos de la mesa están listos para llevarse a los comensales.
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closeConfirmarEntrega()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700">Cancelar</button>
+                    <button type="button" id="btn-confirmar-entrega-submit" onclick="confirmarEntregarMesa()" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow">
+                        Confirmar Entrega
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenedor flotante de notificaciones / toasts -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -808,6 +895,13 @@
         // ESTADO GLOBAL
         let currentFilter = 'todas';
         let allOrders = [];
+        let allMesaGroups = [];
+        let deliveredMesaGroups = [];
+        let pendingDeliveryMesa = null;
+        let isDeliveringMesa = false;
+        let lastMeseroUnreadCount = 0;
+        let meseroNotificaciones = [];
+        let meseroOrdenes = [];
         let allAdminOrders = [];
         let allPlatillos = [];
         let allCategorias = [];
@@ -853,6 +947,11 @@
                     document.getElementById('user-display-admin').innerText = `${user.nombre} (${role})`;
                     loadAdminData();
                     startPolling(8000); // Polling cada 8s en admin para reflejar lo que envíe el móvil
+                } else if (role === 'Mesero') {
+                    showView('mesero');
+                    document.getElementById('user-display-mesero').innerText = `${user.nombre} (${role})`;
+                    fetchMeseroData();
+                    startPolling(5000);
                 } else {
                     showView('cocina');
                     fetchOrdenes();
@@ -868,6 +967,7 @@
             document.getElementById('view-login').classList.toggle('hidden', viewName !== 'login');
             document.getElementById('view-cocina').classList.toggle('hidden', viewName !== 'cocina');
             document.getElementById('view-admin').classList.toggle('hidden', viewName !== 'admin');
+            document.getElementById('view-mesero').classList.toggle('hidden', viewName !== 'mesero');
         }
 
         // PESTAÑAS ADMIN
@@ -1007,12 +1107,84 @@
                     fetchOrdenes(true);
                 } else if (user.rol === 'Administrador') {
                     loadAdminData(true);
+                } else if (user.rol === 'Mesero') {
+                    fetchMeseroData(true);
                 }
             }, intervalMs);
         }
 
         function stopPolling() {
             if (pollingInterval) clearInterval(pollingInterval);
+        }
+
+        function buildMesaGroups(ordenes, includeDelivered = false) {
+            const map = new Map();
+
+            ordenes.forEach(orden => {
+                const mesaId = orden.mesa_id;
+                if (!map.has(mesaId)) {
+                    map.set(mesaId, {
+                        mesa_id: mesaId,
+                        mesa: orden.mesa || { id: mesaId, numero: 'S/N' },
+                        ordenes: [],
+                        detalles: [],
+                        meseros: [],
+                        created_at: orden.created_at,
+                    });
+                }
+
+                const group = map.get(mesaId);
+                group.ordenes.push(orden);
+
+                if (orden.user && !group.meseros.some(m => m.id === orden.user.id)) {
+                    group.meseros.push(orden.user);
+                }
+
+                if (new Date(orden.created_at) < new Date(group.created_at)) {
+                    group.created_at = orden.created_at;
+                }
+
+                (orden.detalles || []).forEach(d => {
+                    group.detalles.push({
+                        ...d,
+                        estado: d.estado || (orden.estado === 'entregado' ? 'entregado' : (orden.estado === 'listo' ? 'listo' : (orden.estado === 'preparando' ? 'preparando' : 'pendiente'))),
+                        orden_id: orden.id,
+                    });
+                });
+            });
+
+            return Array.from(map.values()).map(group => {
+                const total = group.detalles.length;
+                const pendientes = group.detalles.filter(d => d.estado === 'pendiente').length;
+                const preparando = group.detalles.filter(d => d.estado === 'preparando').length;
+                const listos = group.detalles.filter(d => d.estado === 'listo').length;
+                const entregados = group.detalles.filter(d => d.estado === 'entregado').length;
+
+                let estadoMesa = 'pendiente';
+                if (includeDelivered && total > 0 && entregados === total) {
+                    estadoMesa = 'entregado';
+                } else if (total > 0 && pendientes === 0 && preparando === 0 && listos > 0) {
+                    estadoMesa = 'listo';
+                } else if (preparando > 0 || listos > 0) {
+                    estadoMesa = 'preparando';
+                }
+
+                const listosOParaEntrega = listos + entregados;
+                const progreso = total > 0 ? Math.round((listosOParaEntrega / total) * 100) : 0;
+                const puedeEntregar = total > 0 && pendientes === 0 && preparando === 0 && listos > 0;
+
+                return {
+                    ...group,
+                    total,
+                    pendientes,
+                    preparando,
+                    listos,
+                    entregados,
+                    progreso,
+                    estadoMesa,
+                    puedeEntregar,
+                };
+            });
         }
 
         async function fetchOrdenes(isSilent = false) {
@@ -1029,6 +1201,7 @@
 
                 const data = await res.json();
                 const active = data.filter(o => ['pendiente', 'preparando', 'listo'].includes(o.estado));
+                const delivered = data.filter(o => o.estado === 'entregado');
 
                 // Si llegaron comandas nuevas desde la app móvil, emitir aviso sonoro y visual
                 if (isSilent && active.length > lastOrdersCount && lastOrdersCount > 0) {
@@ -1037,6 +1210,8 @@
                 }
                 lastOrdersCount = active.length;
                 allOrders = active;
+                allMesaGroups = buildMesaGroups(active, false);
+                deliveredMesaGroups = buildMesaGroups(delivered, true);
 
                 updateCounters();
                 renderOrders();
@@ -1052,23 +1227,77 @@
             }
         }
 
-        async function updateEstado(ordenId, nuevoEstado) {
+        async function updateDetalleEstado(detalleId, nuevoEstado) {
             try {
-                const res = await fetch(`/api/ordenes/${ordenId}/estado`, {
+                const res = await fetch(`/api/orden-detalles/${detalleId}/estado`, {
                     method: 'PATCH',
                     headers: apiHeaders(),
                     body: JSON.stringify({ estado: nuevoEstado })
                 });
 
+                const data = await res.json();
                 if (!res.ok) {
-                    const data = await res.json();
-                    showNotification(data.mensaje || 'Error al actualizar estado', 'error');
+                    showNotification(data.mensaje || 'Error al actualizar platillo', 'error');
                     return;
                 }
-                showNotification('Estado de comanda actualizado', 'success');
+                showNotification(
+                    nuevoEstado === 'preparando' ? 'Platillo marcado en preparación' : 'Platillo marcado como listo',
+                    'success'
+                );
                 await fetchOrdenes();
             } catch (err) {
                 showNotification('Error de conexión con el servidor', 'error');
+            }
+        }
+
+        function openConfirmarEntrega(mesaId) {
+            const group = allMesaGroups.find(g => g.mesa_id === mesaId);
+            if (!group || !group.puedeEntregar) {
+                showNotification('No puedes entregar la mesa mientras queden platillos pendientes o en preparación.', 'warning');
+                return;
+            }
+            pendingDeliveryMesa = group;
+            const meserosTxt = group.meseros.length ? group.meseros.map(m => m.name).join(', ') : 'Mesero asignado';
+            document.getElementById('modal-entrega-mensaje').innerText =
+                `¿Confirmas la entrega de la Mesa ${group.mesa.numero}? (${group.total} platillo${group.total === 1 ? '' : 's'} listo${group.total === 1 ? '' : 's'} · Responsable: ${meserosTxt})`;
+            document.getElementById('modal-confirmar-entrega').classList.remove('hidden');
+        }
+
+        function closeConfirmarEntrega() {
+            pendingDeliveryMesa = null;
+            document.getElementById('modal-confirmar-entrega').classList.add('hidden');
+        }
+
+        async function confirmarEntregarMesa() {
+            if (!pendingDeliveryMesa || isDeliveringMesa) return;
+            isDeliveringMesa = true;
+            const btn = document.getElementById('btn-confirmar-entrega-submit');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Enviando...';
+            }
+
+            try {
+                const res = await fetch(`/api/mesas/${pendingDeliveryMesa.mesa_id}/entregar`, {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    showNotification(data.mensaje || 'No se pudo entregar la mesa', 'error');
+                    return;
+                }
+                closeConfirmarEntrega();
+                showNotification(data.mensaje || 'Mesa entregada y mesero notificado', 'success');
+                await fetchOrdenes();
+            } catch (err) {
+                showNotification('Error de conexión con el servidor', 'error');
+            } finally {
+                isDeliveringMesa = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = 'Confirmar Entrega';
+                }
             }
         }
 
@@ -1085,21 +1314,44 @@
         }
 
         function updateCounters() {
-            const countPendiente = allOrders.filter(o => o.estado === 'pendiente').length;
-            const countPreparando = allOrders.filter(o => o.estado === 'preparando').length;
-            const countListo = allOrders.filter(o => o.estado === 'listo').length;
+            const countPendiente = allMesaGroups.filter(g => g.estadoMesa === 'pendiente').length;
+            const countPreparando = allMesaGroups.filter(g => g.estadoMesa === 'preparando').length;
+            const countListo = allMesaGroups.filter(g => g.estadoMesa === 'listo').length;
+            const countEntregado = deliveredMesaGroups.length;
 
-            document.getElementById('badge-count-todas').innerText = allOrders.length;
+            document.getElementById('badge-count-todas').innerText = allMesaGroups.length;
             document.getElementById('badge-count-pendiente').innerText = countPendiente;
             document.getElementById('badge-count-preparando').innerText = countPreparando;
             document.getElementById('badge-count-listo').innerText = countListo;
+            const badgeEntregado = document.getElementById('badge-count-entregado');
+            if (badgeEntregado) badgeEntregado.innerText = countEntregado;
+        }
+
+        function renderDetalleBadge(estado) {
+            if (estado === 'preparando') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#2879A8]/15 text-[#2879A8] border border-[#2879A8]/30">🔥 En preparación</span>`;
+            }
+            if (estado === 'listo') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">✅ Listo</span>`;
+            }
+            if (estado === 'entregado') {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700 border border-slate-300">🍽️ Entregado</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#EBD140]/30 text-[#685305] border border-[#EBD140]/50">⏳ Pendiente</span>`;
         }
 
         function renderOrders() {
             const grid = document.getElementById('ordenes-grid');
             const empty = document.getElementById('ordenes-empty');
 
-            let filtered = currentFilter === 'todas' ? allOrders : allOrders.filter(o => o.estado === currentFilter);
+            let filtered;
+            if (currentFilter === 'entregado') {
+                filtered = deliveredMesaGroups;
+            } else if (currentFilter === 'todas') {
+                filtered = allMesaGroups;
+            } else {
+                filtered = allMesaGroups.filter(g => g.estadoMesa === currentFilter);
+            }
 
             if (filtered.length === 0) {
                 grid.innerHTML = '';
@@ -1109,63 +1361,104 @@
 
             empty.classList.add('hidden');
 
-            grid.innerHTML = filtered.map(orden => {
-                let cardClass, badgeBg, badgeText, badgeIcon, btnAction;
+            grid.innerHTML = filtered.map(group => {
+                let cardClass, badgeBg, badgeText, badgeIcon, barColor;
 
-                const elapsed = Math.round((Date.now() - new Date(orden.created_at)) / 60000);
+                const elapsed = Math.round((Date.now() - new Date(group.created_at)) / 60000);
                 const elapsedStr = isNaN(elapsed) ? '' : `⏱ ${elapsed}m`;
 
-                if (orden.estado === 'preparando') {
-                    cardClass  = 'card-preparando';
-                    badgeBg    = 'bg-[#2879A8]/15 text-[#2879A8] border-[#2879A8]/30';
-                    badgeText  = 'En Preparación';
-                    badgeIcon  = '🔥';
-                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'listo')" class="btn-action w-full py-3.5 px-4 bg-[#2879A8] hover:bg-[#20638a] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md">✓ Marcar como Listo</button>`;
-                } else if (orden.estado === 'listo') {
-                    cardClass  = 'card-listo';
-                    badgeBg    = 'bg-emerald-100 text-emerald-900 border-emerald-300';
-                    badgeText  = 'Listo para Servir';
-                    badgeIcon  = '✅';
-                    btnAction  = `<div class="w-full py-3 px-4 bg-emerald-50 text-emerald-800 text-sm font-semibold rounded-xl text-center border-2 border-emerald-300">✅ Listo para servir</div>`;
+                if (group.estadoMesa === 'entregado') {
+                    cardClass = 'bg-white border-l-4 border-slate-400';
+                    badgeBg = 'bg-slate-200 text-slate-800 border-slate-300';
+                    badgeText = 'Entregada';
+                    badgeIcon = '🍽️';
+                    barColor = 'bg-slate-500';
+                } else if (group.estadoMesa === 'listo') {
+                    cardClass = 'card-listo';
+                    badgeBg = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                    badgeText = 'Lista para Entregar';
+                    badgeIcon = '✅';
+                    barColor = 'bg-emerald-500';
+                } else if (group.estadoMesa === 'preparando') {
+                    cardClass = 'card-preparando';
+                    badgeBg = 'bg-[#2879A8]/15 text-[#2879A8] border-[#2879A8]/30';
+                    badgeText = 'En Preparación';
+                    badgeIcon = '🔥';
+                    barColor = 'bg-[#2879A8]';
                 } else {
-                    cardClass  = 'card-pendiente';
-                    badgeBg    = 'bg-[#EBD140]/30 text-[#685305] border-[#EBD140]/50';
-                    badgeText  = 'Pendiente';
-                    badgeIcon  = '⏳';
-                    btnAction  = `<button onclick="updateEstado(${orden.id}, 'preparando')" class="btn-action w-full py-3.5 px-4 bg-[#EBD140] hover:bg-[#dfc635] text-[#2E3C43] font-black rounded-xl text-sm flex items-center justify-center gap-2 shadow-md">🍳 Iniciar Preparación</button>`;
+                    cardClass = 'card-pendiente';
+                    badgeBg = 'bg-[#EBD140]/30 text-[#685305] border-[#EBD140]/50';
+                    badgeText = 'Pendiente';
+                    badgeIcon = '⏳';
+                    barColor = 'bg-[#EBD140]';
                 }
 
-                const dateObj = new Date(orden.created_at);
+                const dateObj = new Date(group.created_at);
                 const timeStr = isNaN(dateObj) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const ordenesLabel = group.ordenes.map(o => `#${o.id}`).join(', ');
+                const meserosLabel = group.meseros.length ? group.meseros.map(m => m.name).join(', ') : 'Sin asignar';
 
-                const platillosHtml = (orden.detalles || []).map(d => `
-                    <li class="py-2.5 border-b border-slate-100 last:border-none">
-                        <div class="flex items-start gap-2.5">
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2E3C43] text-white text-sm font-bold shrink-0">
-                                ${d.cantidad}x
-                            </span>
-                            <span class="font-bold text-[#2E3C43] text-sm leading-snug pt-1">
-                                ${d.platillo ? d.platillo.nombre : 'Platillo'}
-                            </span>
+                const platillosHtml = group.detalles.map(d => {
+                    let itemAction = '';
+                    if (d.estado === 'pendiente') {
+                        itemAction = `<button onclick="updateDetalleEstado(${d.id}, 'preparando')" class="btn-action px-2.5 py-1.5 bg-[#EBD140] hover:bg-[#dfc635] text-[#2E3C43] font-extrabold rounded-lg text-[11px] shadow-sm whitespace-nowrap">🍳 En preparación</button>`;
+                    } else if (d.estado === 'preparando') {
+                        itemAction = `<button onclick="updateDetalleEstado(${d.id}, 'listo')" class="btn-action px-2.5 py-1.5 bg-[#2879A8] hover:bg-[#20638a] text-white font-bold rounded-lg text-[11px] shadow-sm whitespace-nowrap">✓ Listo</button>`;
+                    }
+
+                    return `
+                    <li class="py-3 border-b border-slate-100 last:border-none">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2E3C43] text-white text-xs font-bold shrink-0">
+                                    ${d.cantidad}x
+                                </span>
+                                <div class="min-w-0">
+                                    <span class="font-bold text-[#2E3C43] text-sm leading-snug block">
+                                        ${d.platillo ? d.platillo.nombre : 'Platillo'}
+                                    </span>
+                                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                        ${renderDetalleBadge(d.estado)}
+                                        <span class="text-[10px] text-slate-400 font-semibold">Comanda #${d.orden_id}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            ${itemAction ? `<div class="shrink-0">${itemAction}</div>` : ''}
                         </div>
                         ${d.notas ? `
-                            <div class="mt-1.5 ml-10 px-2.5 py-1.5 bg-[#EBD140]/15 border border-[#EBD140]/30 text-[#544304] text-xs rounded-lg flex items-start gap-1.5">
+                            <div class="mt-2 ml-10 px-2.5 py-1.5 bg-[#EBD140]/15 border border-[#EBD140]/30 text-[#544304] text-xs rounded-lg flex items-start gap-1.5">
                                 <span class="shrink-0 text-[#C24840] font-bold">Nota:</span>
                                 <span class="font-medium">${d.notas}</span>
                             </div>
                         ` : ''}
                     </li>
-                `).join('');
+                    `;
+                }).join('');
+
+                let footerHtml = '';
+                if (group.estadoMesa === 'entregado') {
+                    footerHtml = `<div class="w-full py-3 px-4 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl text-center border border-slate-200">🍽️ Mesa entregada al mesero</div>`;
+                } else {
+                    const faltantes = group.pendientes + group.preparando;
+                    footerHtml = `
+                        <button onclick="openConfirmarEntrega(${group.mesa_id})"
+                            ${group.puedeEntregar ? '' : 'disabled'}
+                            class="btn-action w-full py-3.5 px-4 rounded-xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-md ${group.puedeEntregar ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75 shadow-none'}">
+                            <span>🍽️ Entregar mesa</span>
+                        </button>
+                        ${!group.puedeEntregar ? `<p class="text-[11px] text-slate-500 font-medium text-center mt-2">Faltan ${faltantes} platillo${faltantes === 1 ? '' : 's'} por terminar antes de entregar</p>` : ''}
+                    `;
+                }
 
                 return `
-                    <div class="${cardClass} rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+                    <div class="${cardClass} bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between border border-slate-200/70">
                         <div>
                             <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xl font-black text-[#2E3C43]">#${orden.id}</span>
-                                    <span class="px-2.5 py-0.5 rounded-lg bg-[#2E3C43] text-white text-xs font-bold">
-                                        Mesa ${orden.mesa ? orden.mesa.numero : 'S/N'}
+                                    <span class="px-3 py-1 rounded-lg bg-[#2E3C43] text-white text-sm font-black">
+                                        Mesa ${group.mesa ? group.mesa.numero : 'S/N'}
                                     </span>
+                                    <span class="text-xs font-bold text-slate-500">${ordenesLabel}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     ${elapsedStr ? `<span class="text-xs text-slate-500 font-medium">${elapsedStr}</span>` : ''}
@@ -1176,19 +1469,157 @@
                                 </div>
                             </div>
                             <div class="px-4 py-2 bg-slate-100/60 flex items-center justify-between text-[11px] text-slate-600 border-b border-slate-100">
-                                <span class="inline-flex items-center gap-1.5 font-medium">Mesero: <strong class="bg-[#EBD140]/30 text-[#2E3C43] px-2 py-0.5 rounded-md border border-[#EBD140]/50 font-bold">👤 ${orden.user ? orden.user.name : 'Sin asignar'}</strong></span>
+                                <span class="inline-flex items-center gap-1.5 font-medium">Mesero: <strong class="bg-[#EBD140]/30 text-[#2E3C43] px-2 py-0.5 rounded-md border border-[#EBD140]/50 font-bold">👤 ${meserosLabel}</strong></span>
                                 <span>Hora: <strong class="text-slate-700 font-semibold">${timeStr}</strong></span>
+                            </div>
+                            <!-- Progreso general de la mesa -->
+                            <div class="px-4 pt-3 pb-2 bg-slate-50/40 border-b border-slate-100">
+                                <div class="flex items-center justify-between text-[11px] font-bold text-[#2E3C43] mb-1.5">
+                                    <span>Progreso de mesa</span>
+                                    <span>${group.listos + group.entregados}/${group.total} platillos listos (${group.progreso}%)</span>
+                                </div>
+                                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full ${barColor} transition-all duration-300" style="width: ${group.progreso}%"></div>
+                                </div>
+                                <div class="flex items-center gap-3 mt-1.5 text-[10px] font-semibold text-slate-500">
+                                    <span>⏳ ${group.pendientes} pend.</span>
+                                    <span>🔥 ${group.preparando} prep.</span>
+                                    <span>✅ ${group.listos} listos</span>
+                                </div>
                             </div>
                             <div class="p-4">
                                 <ul class="divide-y divide-slate-100">${platillosHtml}</ul>
                             </div>
                         </div>
                         <div class="p-4 bg-slate-50/60 border-t border-slate-100">
-                            ${btnAction}
+                            ${footerHtml}
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // ================= SECCIÓN MESERO (NOTIFICACIONES Y ENTREGAS) =================
+        async function fetchMeseroData(isSilent = false) {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const [resNotif, resOrdenes] = await Promise.all([
+                    fetch('/api/notificaciones', { headers: apiHeaders() }),
+                    fetch('/api/ordenes', { headers: apiHeaders() }),
+                ]);
+
+                if (resNotif.status === 401 || resOrdenes.status === 401) {
+                    handleLogout();
+                    return;
+                }
+
+                if (resNotif.ok) {
+                    const dataNotif = await resNotif.json();
+                    const unreadCount = dataNotif.unread_count || 0;
+                    if (isSilent && unreadCount > lastMeseroUnreadCount) {
+                        playChime();
+                        showNotification('¡Tienes una mesa lista para entregar!', 'success');
+                    }
+                    lastMeseroUnreadCount = unreadCount;
+                    meseroNotificaciones = dataNotif.notificaciones || [];
+                }
+
+                if (resOrdenes.ok) {
+                    meseroOrdenes = await resOrdenes.json();
+                }
+
+                renderMeseroPanel();
+            } catch (err) {
+                if (!isSilent) console.error(err);
+            }
+        }
+
+        async function marcarNotificacionLeida(id) {
+            try {
+                const res = await fetch(`/api/notificaciones/${id}/leer`, {
+                    method: 'PATCH',
+                    headers: apiHeaders(),
+                });
+                if (res.ok) await fetchMeseroData(true);
+            } catch (err) {}
+        }
+
+        async function marcarTodasNotificacionesLeidas() {
+            try {
+                const res = await fetch('/api/notificaciones/leer-todas', {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                });
+                if (res.ok) {
+                    showNotification('Notificaciones marcadas como leídas', 'success');
+                    await fetchMeseroData(true);
+                }
+            } catch (err) {}
+        }
+
+        function renderMeseroPanel() {
+            const badge = document.getElementById('mesero-unread-badge');
+            if (badge) {
+                if (lastMeseroUnreadCount > 0) {
+                    badge.innerText = `${lastMeseroUnreadCount} nueva${lastMeseroUnreadCount === 1 ? '' : 's'}`;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            const notifList = document.getElementById('mesero-notificaciones-list');
+            if (notifList) {
+                if (meseroNotificaciones.length === 0) {
+                    notifList.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No tienes notificaciones por ahora.</p>`;
+                } else {
+                    notifList.innerHTML = meseroNotificaciones.map(n => {
+                        const isUnread = !n.read_at;
+                        const data = n.data || {};
+                        const fecha = n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        return `
+                            <div class="p-3.5 rounded-xl border ${isUnread ? 'bg-emerald-50/80 border-emerald-300' : 'bg-slate-50 border-slate-200'} flex items-center justify-between gap-3">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-extrabold text-[#2E3C43]">${data.titulo || 'Mesa lista'}</span>
+                                        ${isUnread ? '<span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">Nueva</span>' : ''}
+                                        <span class="text-[11px] text-slate-400">${fecha}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-600">${data.mensaje || ''}</p>
+                                </div>
+                                ${isUnread ? `<button onclick="marcarNotificacionLeida('${n.id}')" class="btn-action px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[#2E3C43] rounded-lg text-[11px] font-bold shrink-0">Marcar leída</button>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            const ordenesGrid = document.getElementById('mesero-ordenes-grid');
+            if (ordenesGrid) {
+                const activas = meseroOrdenes.filter(o => ['pendiente', 'preparando', 'listo', 'entregado'].includes(o.estado));
+                if (activas.length === 0) {
+                    ordenesGrid.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">No hay comandas activas o recientes.</p>`;
+                } else {
+                    ordenesGrid.innerHTML = activas.map(o => `
+                        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-extrabold text-sm text-[#2E3C43]">Mesa ${o.mesa ? o.mesa.numero : 'S/N'} · #${o.id}</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeClass(o.estado)}">${o.estado.charAt(0).toUpperCase() + o.estado.slice(1)}</span>
+                            </div>
+                            <ul class="space-y-1 text-xs text-slate-600">
+                                ${(o.detalles || []).map(d => `
+                                    <li class="flex items-center justify-between gap-2">
+                                        <span><strong>${d.cantidad}x</strong> ${d.platillo ? d.platillo.nombre : 'Platillo'}</span>
+                                        ${renderDetalleBadge(d.estado || o.estado)}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `).join('');
+                }
+            }
         }
 
         // ================= SECCIÓN ADMINISTRACIÓN =================

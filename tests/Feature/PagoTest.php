@@ -23,8 +23,7 @@ class PagoTest extends TestCase
         $mesero = User::where('email', 'mesero@restaurante.com')->first();
         $token = $mesero->createToken('test')->plainTextToken;
 
-        $mesa = Mesa::first();
-        $mesa->update(['estado' => 'ocupada']);
+        $mesa = Mesa::create(['numero' => 99, 'estado' => 'ocupada']);
 
         // Comanda 1
         $orden1 = Orden::create([
@@ -108,8 +107,7 @@ class PagoTest extends TestCase
         $mesero = User::where('email', 'mesero@restaurante.com')->first();
         $token = $mesero->createToken('test')->plainTextToken;
 
-        $mesa = Mesa::first();
-        $mesa->update(['estado' => 'ocupada']);
+        $mesa = Mesa::create(['numero' => 99, 'estado' => 'ocupada']);
 
         $orden = Orden::create([
             'mesa_id' => $mesa->id,
