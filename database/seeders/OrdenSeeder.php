@@ -71,6 +71,7 @@ class OrdenSeeder extends Seeder
                 'cantidad' => 1,
                 'precio' => $platillos[1]->precio,
                 'notas' => 'Tortillas bien doradas',
+                'estado' => 'preparando',
             ]);
         }
         if (isset($platillos[2])) {
@@ -80,6 +81,7 @@ class OrdenSeeder extends Seeder
                 'cantidad' => 1,
                 'precio' => $platillos[2]->precio,
                 'notas' => 'Masa delgada y bien cocida',
+                'estado' => 'preparando',
             ]);
         }
 
@@ -101,6 +103,7 @@ class OrdenSeeder extends Seeder
                 'cantidad' => 1,
                 'precio' => $platillos[4]->precio,
                 'notas' => 'Extra salsa de chocolate',
+                'estado' => 'listo',
             ]);
         }
 
@@ -121,6 +124,7 @@ class OrdenSeeder extends Seeder
             'cantidad' => 2,
             'precio' => $platillos[0]->precio,
             'notas' => null,
+            'estado' => 'entregado',
         ]);
         if (isset($platillos[2])) {
             OrdenDetalle::create([
@@ -129,6 +133,7 @@ class OrdenSeeder extends Seeder
                 'cantidad' => 1,
                 'precio' => $platillos[2]->precio,
                 'notas' => null,
+                'estado' => 'entregado',
             ]);
         }
         Pago::updateOrCreate(

@@ -233,3 +233,29 @@ y cómo se resolvió cada uno. Formato: **Problema → Impacto → Solución →
 - **Solución:** quitar la dependencia de la red en Windows. En ese SO se usa `action-setup-postgres@v6`, que arranca el **PostgreSQL preinstalado en la imagen del runner** (con esa versión Windows ya había pasado en la primera ejecución completa). Linux y macOS siguen con `@v9` y PostgreSQL 16 (en macOS v9 es imprescindible, ver P-35).
 - **Trade-off:** en Windows la versión mayor de PostgreSQL es la que trae el runner (puede no ser 16). La paridad exacta con producción la garantizan Linux (CI) y la imagen Docker; Windows valida la compatibilidad multiplataforma.
 - **Lección:** un pipeline no debería depender de servicios externos frágiles en el camino crítico si existe una alternativa local.
+
+---
+
+## Pruebas E2E con Selenium
+
+### P-42 · Ningún clic llegaba a la página después de iniciar sesión como Cocina
+- **Síntoma:** en la primera ejecución de las pruebas Selenium pasaban las de login y Administración, pero en la vista de Cocina ningún clic tenía efecto (filtros, "Salir"). El navegador no recibía **ningún** evento (`pointerdown`, `click`), ni con clic nativo, ni con `ActionChains`, ni enviando el clic directo por el protocolo de Chrome (CDP); en cambio `element.click()` por JavaScript sí funcionaba. Pasaba igual en modo headless y con ventana visible.
+- **Diagnóstico (por descarte):** se descartaron capas superpuestas (`elementsFromPoint` devolvía el botón), estilos (`pointer-events`, `inert`, opacidad), *polling*, animaciones, `prefers-reduced-motion`, `backdrop-filter` y avisos *toast*. La pista decisiva: tras el login de Cocina `document.hasFocus()` era `false`, y con Administración `true`.
+- **Causa:** el **gestor de contraseñas de Chrome** detecta que `12345678` (contraseña de los usuarios de demostración) aparece en filtraciones públicas y abre su aviso de "contraseña comprometida". Ese aviso del navegador le quita el foco a la página y la entrada de mouse deja de llegar al documento. No es un error de la aplicación.
+- **Solución:** el Chrome de las pruebas arranca con el gestor de contraseñas y la detección de filtraciones desactivados (`credentials_enable_service`, `profile.password_manager_leak_detection`, `--disable-features=PasswordLeakDetection`). Verificado: la página conserva el foco y los clics llegan.
+- **Lección:** en pruebas E2E, el navegador también es parte del sistema bajo prueba; sus diálogos propios pueden interferir. Y conviene no usar contraseñas débiles ni siquiera en datos de demostración.
+
+### P-43 · "Element click intercepted" por la cabecera fija
+- **Síntoma:** la prueba de la orden móvil completaba todo el flujo, pero fallaba en el último clic (filtro "Listas"): *"Other element would receive the click"*.
+- **Causa:** tras desplazar la página hasta la tarjeta de la orden, la cabecera `sticky` de Cocina quedaba encima de los filtros.
+- **Solución:** volver al inicio (`window.scrollTo(0, 0)`) antes de usar los filtros. Selenium reportó bien el problema: un usuario tampoco podría pulsar un botón tapado.
+
+### P-44 · Pruebas que modifican datos y deben ser repetibles
+- **Problema:** la prueba de Cocina necesita una orden *pendiente*; con los datos sembrados solo hay una, así que una segunda ejecución fallaría.
+- **Solución:** la prueba crea su propia orden por la API como lo haría la app móvil del mesero, y luego la sigue en la interfaz. Así es repetible (verificado con dos ejecuciones seguidas, 7/7) y además prueba la sincronización app móvil → web. Las pruebas E2E solo corren contra staging, cuya base se recrea en cada deploy, nunca contra producción.
+
+### P-45 · Commits directos a `main` saltándose el flujo (y CVEs nuevos que bloqueaban el pipeline)
+- **Síntoma:** al integrar las pruebas E2E, el CI falló en `composer audit`. Al revisar se encontraron además 6 commits subidos **directo a `main`** (24-27 nov: CRUD de usuarios, notificaciones, estado por platillo en cocina, entrega por mesa), sin pasar por `develop` ni `staging`. Sus ejecuciones del pipeline también fallaron en `composer audit` y **no se desplegaron** (el job `deploy` depende de `ci-ok`): producción quedó protegida.
+- **Causa:** (1) se publicaron CVE nuevos de Symfony (CVE-2026-133743, -133746, -133751, -133755); (2) `main` no tenía protección de rama (requiere rol Admin, P-28/P-33).
+- **Solución:** `main` se integró en `develop` (fusión sin conflictos), se actualizó `symfony/*` a 7.4.24/7.4.25 (`composer audit` limpio) y se verificó el código nuevo: Pint OK y **27 pruebas** en SQLite y PostgreSQL. Las pruebas E2E se adaptaron a la nueva interfaz de cocina (tarjetas por mesa y estado por platillo): ahora la prueba 4 prepara el platillo concreto de la comanda y verifica el cambio también en la API.
+- **Lección:** el pipeline funcionó como red de seguridad (bloqueó el despliegue de código no auditado), pero la protección de ramas es necesaria para que el flujo `develop → staging → main` no dependa de la disciplina de cada integrante.
